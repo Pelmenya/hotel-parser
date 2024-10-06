@@ -41,7 +41,7 @@ services:
       PORT: ${DEV_PORT}
       SECRET: ${SECRET}
       IS_DEV: "true"
-      POSTGRES_HOST: postgres_postgis
+      POSTGRES_HOST: ${POSTGRES_HOST}
       POSTGRES_PORT: ${POSTGRES_PORT}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
