@@ -27,6 +27,14 @@ services:
     volumes:
       - pgadmin_data_parser:/var/lib/pgadmin
 
+  squid:
+    image: sameersbn/squid:3.5.27-2
+    container_name: squid
+    ports:
+      - "3128:3128"
+    volumes:
+      - ./squid.conf:/etc/squid/squid.conf
+
   hotel-parser:
     build: ./ 
     container_name: hotel-parser
@@ -37,6 +45,7 @@ services:
       - ${DEV_PORT}:3000
     depends_on:
       - postgres_postgis_parser
+      - squid
     environment:
       PORT: ${DEV_PORT}
       SECRET: ${SECRET}

@@ -5,15 +5,15 @@ export class Country {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({unique: true})
+  @Column({ unique: true })
   name: string;
 
-  @Column()
+  @Column({ default: null })
   description?: string;
 
-  @Column()
+  @Column({ default: null })
   location?: string;
 
-  @Column("simple-array")
+  @Column("simple-array", { default: null })
   imageUrls?: string[];
 }
