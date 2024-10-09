@@ -5,6 +5,8 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ParserModule } from './modules/parser/parser.module';
 import { CountryModule } from './modules/country/country.module';
+import { HotelModule } from './modules/hotel/hotel.module';
+import { FileModule } from './modules/file/file.module';
 
 @Module({
   imports: [
@@ -14,6 +16,8 @@ import { CountryModule } from './modules/country/country.module';
     PostgresModule,
     ParserModule,
     CountryModule,
+    HotelModule,
+    FileModule,
   ],
   controllers: [AppController],
   providers: [AppService],

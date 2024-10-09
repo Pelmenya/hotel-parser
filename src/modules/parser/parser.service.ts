@@ -5,6 +5,7 @@ import * as puppeteer from 'puppeteer';
 import * as cheerio from 'cheerio';
 import { CountryRepository } from '../country/country.repository';
 
+export type TParserLoadContent = 'puppeteer' | 'axios';
 @Injectable()
 export class ParserService {
     constructor(
@@ -12,11 +13,12 @@ export class ParserService {
         private readonly countriesRepository: CountryRepository
     ) { }
 
-    async parsePage(params: any) {
+    // axios без динамики на странице, puppeteer с динамическим поведением на странице
+    async parsePage(params: any,  type : TParserLoadContent = 'axios') {
         const slug = params.slug;
         const url = this.configService.get('BASE_PARSE_URL') + `/${slug ? slug : ''}`; // Замените на реальный URL
         try {
-            const data  = await this.loadFullPageWithLocalProxy(url);
+            const  { data }  = type === 'axios' ? await axios.get(url) : { data: await this.loadFullPageWithLocalProxy(url)};
             console.log(data)
             return data
         } catch (error) {
@@ -29,7 +31,7 @@ export class ParserService {
         try {
             const data = await this.parsePage({ slug: 'strany-i-goroda' });
             const $ = cheerio.load(data);
-    
+
             const getCountry = async () => {
                 const promises = [];
                 $('.uk-flex').each((index, element) => {
@@ -41,13 +43,34 @@ export class ParserService {
                 });
                 return Promise.all(promises);
             };
-    
+
             await getCountry();
             const countries = await this.countriesRepository.findAll();
             return countries;
         } catch (error) {
             return error;
         }
+    }
+
+    async parseHotelsByPage(page: number) {
+        const data = await this.parsePage({ slug: `?page=${page}` });
+        const $ = cheerio.load(data);
+
+        const getHotels = async () => {
+            const promises = [];
+            $('.uk-flex').each((index, element) => {
+                const hotelWrapper = $(element).find('.hotel-wrapper');
+
+
+                const promise = this.countriesRepository.create({
+                    name: 'ddd',
+                });
+                promises.push(promise);
+            });
+            return Promise.all(promises);
+        };
+
+        await getHotels();
     }
 
     async getCountPageOfHotelsInCountry(country: string) {
@@ -59,8 +82,9 @@ export class ParserService {
             args: ['--proxy-server=http://squid:3128', '--no-sandbox', '--disable-setuid-sandbox'],
         });
         const page = await browser.newPage();
-        await page.goto(url);
-    
+        await page.goto(url, { waitUntil: 'load', timeout: 0 });
+
+
         // Ваши действия на странице
         const content = await page.content();
 
