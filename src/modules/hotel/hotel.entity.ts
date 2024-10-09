@@ -1,6 +1,7 @@
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, Index } from 'typeorm';
 
 @Entity()
+@Index(["name", "address"], { unique: true })
 export class Hotel {
     @PrimaryGeneratedColumn("uuid")
     id: string;
@@ -11,15 +12,18 @@ export class Hotel {
     @Column()
     address: string;
 
-    @Column({default: null })
+    @Column({ default: null })
+    locationValue: string;
+
+    @Column({ default: null })
+    locationFrom: string;
+
+    @Column({ default: null })
+    locationName: string;
+
+    @Column({ default: null })
     stars: number;
 
-    @Column({ default: null })
-    description?: string;
-
-    @Column({ default: null })
-    location?: string;
-
     @Column("simple-array", { default: null })
-    imageUrls?: string[];
+    prevImageUrls?: string[];
 }
