@@ -8,20 +8,45 @@ import { HotelRepository } from '../hotel/hotel.repository';
 import { FileService } from '../file/file.service';
 
 export type TParserLoadContent = 'puppeteer' | 'axios';
+
 @Injectable()
 export class ParserService {
+    proxyConfig: {
+        proxy: {
+            protocol: string,
+            host: string,
+            port: number,
+        }
+    } = {
+            proxy: {
+                protocol: '',
+                host: '',
+                port: 0
+            }
+        };
+
     constructor(
         private readonly configService: ConfigService,
         private readonly fileService: FileService,
         private readonly countriesRepository: CountryRepository,
         private readonly hotelRepository: HotelRepository,
-    ) { }
+    ) {
+        this.proxyConfig = {
+            proxy: {
+                protocol: this.configService.get('PROXY_PROTOCOL'),
+                host: this.configService.get('PROXY_HOST'),
+                port: Number(this.configService.get('PROXY_PORT')),
+            }
+        }
+        this.checkIP();
+    }
 
     // axios без динамики на странице, puppeteer с динамическим поведением на странице
     async parsePage(params: any, type: TParserLoadContent = 'axios') {
         const url = this.configService.get('BASE_PARSE_URL') + `/${params}`; // Замените на реальный URL
+        await this.checkIP();
         try {
-            const { data } = type === 'axios' ? await axios.get(url) : { data: await this.loadFullPageWithLocalProxy(url) };
+            const { data } = type === 'axios' ? await axios.get(url, this.proxyConfig) : { data: await this.loadFullPageWithLocalProxy(url) };
             return data
         } catch (error) {
             console.log(error)
@@ -70,14 +95,13 @@ export class ParserService {
                 const locationName = $(element).find('.zen-hotelcard-location-name').text().trim();
                 const prevImageUrls = $(element).find('.zenimage-content').attr('src');
                 hotels.push({ name, address, locationValue, locationFrom, locationName, hotelLink, prevImageUrls: [prevImageUrls] });
-                promises.push(this.fileService.downloadImage(prevImageUrls), prevImageUrls.split('/').pop());               
+                promises.push(this.fileService.downloadImage(prevImageUrls), prevImageUrls.split('/').pop());
             });
 
             Promise.all(promises);
         };
 
         await getHotels();
-        console.log(hotels)
         return hotels
     }
 
@@ -87,10 +111,14 @@ export class ParserService {
 
     async loadFullPageWithLocalProxy(url: string) {
         const browser = await puppeteer.launch({
-            args: ['--proxy-server=http://squid:3128', '--no-sandbox', '--disable-setuid-sandbox'],
+            args: [
+                `--proxy-server=${this.proxyConfig.proxy.protocol}://${this.proxyConfig.proxy.host}:${this.proxyConfig.proxy.port}`, 
+                '--no-sandbox', 
+                '--disable-setuid-sandbox'
+            ],
         });
         const page = await browser.newPage();
-        await page.goto(url, { waitUntil: 'load', timeout: 0 });
+        await page.goto('url', { waitUntil: 'load', timeout: 0 });
 
 
         // Ваши действия на странице
@@ -98,5 +126,14 @@ export class ParserService {
 
         await browser.close();
         return content;
+    }
+
+    async checkIP() {
+        try {
+            const response = await axios.get('http://api.ipify.org', this.proxyConfig);
+            console.log('Your IP through proxy is:', response.data);
+        } catch (error) {
+            console.error('Error checking IP:', error);
+        }
     }
 }

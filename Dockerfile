@@ -21,7 +21,6 @@ libnss3 \
     libdrm2 \
     libxkbcommon0 \  
     libgbm-dev \
-    squid \
     --no-install-recommends && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -45,5 +44,5 @@ COPY squid.conf /etc/squid/squid.conf
 EXPOSE 3128
 
 # Запускаем приложение
-CMD ["sh", "-c", "squid -N & npm run start:dev"]
+CMD ["sh", "-c", "npm run start:dev"]
 
