@@ -6,51 +6,46 @@ import * as cheerio from 'cheerio';
 import { CountryRepository } from '../country/country.repository';
 import { HotelRepository } from '../hotel/hotel.repository';
 import { FileService } from '../file/file.service';
+import { SocksProxyAgent } from 'socks-proxy-agent';
 
 export type TParserLoadContent = 'puppeteer' | 'axios';
 
 @Injectable()
 export class ParserService {
-    proxyConfig: {
-        proxy: {
-            protocol: string,
-            host: string,
-            port: number,
-        }
-    } = {
-            proxy: {
-                protocol: '',
-                host: '',
-                port: 0
-            }
-        };
-
+    private axiosInstance: any;
+    private proxyUrl: string;
     constructor(
         private readonly configService: ConfigService,
         private readonly fileService: FileService,
         private readonly countriesRepository: CountryRepository,
         private readonly hotelRepository: HotelRepository,
     ) {
-        this.proxyConfig = {
-            proxy: {
-                protocol: this.configService.get('PROXY_PROTOCOL'),
-                host: this.configService.get('PROXY_HOST'),
-                port: Number(this.configService.get('PROXY_PORT')),
-            }
-        }
+        const proxyHost = this.configService.get('PROXY_HOST');
+        const proxyPort = this.configService.get('PROXY_PORT');
+        const proxyUsername = this.configService.get('PROXY_LOGIN');
+        const proxyPassword = this.configService.get('PROXY_PASSWORD');
+
+        this.proxyUrl = `socks5://${proxyUsername}:${proxyPassword}@${proxyHost}:${proxyPort}`;
+
+        const socksAgent = new SocksProxyAgent(this.proxyUrl);
+
+        this.axiosInstance = axios.create({
+            httpAgent: socksAgent,
+            httpsAgent: socksAgent,
+        });
+
         this.checkIP();
     }
 
-    // axios без динамики на странице, puppeteer с динамическим поведением на странице
     async parsePage(params: any, type: TParserLoadContent = 'axios') {
-        const url = this.configService.get('BASE_PARSE_URL') + `/${params}`; // Замените на реальный URL
+        const url = this.configService.get('BASE_PARSE_URL');
         await this.checkIP();
         try {
-            const { data } = type === 'axios' ? await axios.get(url, this.proxyConfig) : { data: await this.loadFullPageWithLocalProxy(url) };
-            return data
+            const { data } = type === 'axios' ? await this.axiosInstance.get(url) : { data: await this.loadFullPageWithLocalProxy(url) };
+            return data;
         } catch (error) {
-            console.log(error)
-            return error.text;
+            console.error('Error fetching page data:', error);
+            return error;
         }
     };
 
@@ -75,6 +70,7 @@ export class ParserService {
             const countries = await this.countriesRepository.findAll();
             return countries;
         } catch (error) {
+            console.error('Error parsing countries:', error);
             return error;
         }
     }
@@ -98,30 +94,31 @@ export class ParserService {
                 promises.push(this.fileService.downloadImage(prevImageUrls), prevImageUrls.split('/').pop());
             });
 
-            Promise.all(promises);
+            await Promise.all(promises);
         };
 
         await getHotels();
-        return hotels
+        return hotels;
     }
 
     async getCountPageOfHotelsInCountry(country: string) {
-
+        // Реализуйте метод, если необходимо
     }
 
     async loadFullPageWithLocalProxy(url: string) {
+        const proxyHost = this.configService.get('PROXY_HOST');
+        const proxyPort = this.configService.get('PROXY_PORT');
+
         const browser = await puppeteer.launch({
             args: [
-                `--proxy-server=${this.proxyConfig.proxy.protocol}://${this.proxyConfig.proxy.host}:${this.proxyConfig.proxy.port}`, 
-                '--no-sandbox', 
-                '--disable-setuid-sandbox'
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                `--proxy-server=${this.proxyUrl}`
             ],
         });
         const page = await browser.newPage();
-        await page.goto('url', { waitUntil: 'load', timeout: 0 });
+        await page.goto(url, { waitUntil: 'load', timeout: 0 });
 
-
-        // Ваши действия на странице
         const content = await page.content();
 
         await browser.close();
@@ -130,10 +127,11 @@ export class ParserService {
 
     async checkIP() {
         try {
-            const response = await axios.get('http://api.ipify.org', this.proxyConfig);
+            const response = await this.axiosInstance.get('https://api.ipify.org');
             console.log('Your IP through proxy is:', response.data);
         } catch (error) {
             console.error('Error checking IP:', error);
         }
     }
 }
+

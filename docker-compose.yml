@@ -1,7 +1,6 @@
 version: "3.9"
 
 services:
-
   postgres_postgis_parser:
     image: postgis/postgis
     container_name: postgres_postgis_parser
@@ -32,16 +31,6 @@ services:
     networks:
       - custom_network 
 
-  squid:
-    image: sameersbn/squid:3.5.27-2
-    container_name: squid
-    ports:
-      - ${PROXY_PORT}:${PROXY_PORT}
-    volumes:
-      - ./squid.conf:/etc/squid/squid.conf   
-    networks:
-      - custom_network
-
   hotel-parser:
     build: ./ 
     container_name: hotel-parser
@@ -52,7 +41,7 @@ services:
       - ${DEV_PORT}:3000
     depends_on:
       - postgres_postgis_parser
-      - squid   
+      - 3proxy
     environment:
       PORT: ${DEV_PORT}
       SECRET: ${SECRET}
@@ -64,9 +53,20 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     working_dir: /app
-    command: sh -c "cd /app; rm -rf dist; npm install; npm run start:dev"
+    command: npm run start:dev
     networks:
-      - custom_network   # Используем карту-сети
+      - custom_network
+
+  3proxy:
+    build: ./3proxy
+    container_name: 3proxy
+    ports:
+      - "1080:1080"
+    networks:
+      - custom_network
+    environment:
+      PROXY_LOGIN: ${PROXY_LOGIN}
+      PROXY_PASSWORD: ${PROXY_PASSWORD}
 
 volumes:
   postgres_data_parser:
@@ -75,4 +75,3 @@ volumes:
 networks:
   custom_network:
     driver: bridge
-

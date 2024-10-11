@@ -37,12 +37,6 @@ RUN npm install -f
 # Копируем все файлы проекта
 COPY . .
 
-# Копируем конфигурационный файл Squid
-COPY squid.conf /etc/squid/squid.conf
-
-# Открываем порт для Squid
-EXPOSE 3128
-
 # Запускаем приложение
 CMD ["sh", "-c", "npm run start:dev"]
 
