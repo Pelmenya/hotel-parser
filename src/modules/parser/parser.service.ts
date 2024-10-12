@@ -37,11 +37,16 @@ export class ParserService {
         this.checkIP();
     }
 
-    async parsePage(params: any, type: TParserLoadContent = 'axios') {
-        const url = this.configService.get('BASE_PARSE_URL');
+    async parsePage(params: any = '', type: TParserLoadContent = 'axios') {
+        console.log(params)
+        const url =
+            this.configService.get('BASE_PARSE_URL') + params;
+
         await this.checkIP();
         try {
-            const { data } = type === 'axios' ? await this.axiosInstance.get(url) : { data: await this.loadFullPageWithLocalProxy(url) };
+            const { data } = type === 'axios'
+                ? await this.axiosInstance.get(url)
+                : { data: await this.loadFullPageWithLocalProxy(url) };
             return data;
         } catch (error) {
             console.error('Error fetching page data:', error);
@@ -98,7 +103,7 @@ export class ParserService {
         };
 
         await getHotels();
-        return hotels;
+        return data;
     }
 
     async getCountPageOfHotelsInCountry(country: string) {
@@ -106,9 +111,6 @@ export class ParserService {
     }
 
     async loadFullPageWithLocalProxy(url: string) {
-        const proxyHost = this.configService.get('PROXY_HOST');
-        const proxyPort = this.configService.get('PROXY_PORT');
-
         const browser = await puppeteer.launch({
             args: [
                 '--no-sandbox',

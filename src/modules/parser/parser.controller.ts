@@ -7,7 +7,7 @@ export class ParserController {
 
   @Get('page')
   async getPage(@Query() params: { page: number }): Promise<string> {
-    return await this.parseService.parsePage(`?page=${params.page}`);
+    return await this.parseService.parsePage({ page: params.page });
   }
 
   @Get('hotel')

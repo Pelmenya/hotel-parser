@@ -1,7 +1,7 @@
 # Используем базовый образ Node.js
 FROM node:18.20.4
 
-# Install necessary libraries for Puppeteer and Squid
+# Install necessary libraries for Puppeteer
 RUN apt-get update && apt-get install -y \
 libnss3 \
     libatk-bridge2.0-0 \
