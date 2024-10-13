@@ -96,7 +96,7 @@ export class ParserService {
                 const locationName = $(element).find('.zen-hotelcard-location-name').text().trim();
                 const prevImageUrls = $(element).find('.zenimage-content').attr('src');
                 hotels.push({ name, address, locationValue, locationFrom, locationName, hotelLink, prevImageUrls: [prevImageUrls] });
-                promises.push(this.fileService.downloadImage(prevImageUrls), prevImageUrls.split('/').pop());
+                promises.push(this.fileService.downloadImage(prevImageUrls, prevImageUrls.split('/').pop().split('.')[0]), prevImageUrls.split('/').pop());
             });
 
             await Promise.all(promises);
