@@ -42,7 +42,6 @@ export class ParserService {
         const url =
             this.configService.get('BASE_PARSE_URL') + params;
 
-        await this.checkIP();
         try {
             const { data } = type === 'axios'
                 ? await this.axiosInstance.get(url)
@@ -85,25 +84,49 @@ export class ParserService {
         const $ = cheerio.load(data);
         const hotels: any[] = [];
 
-        const getHotels = async () => {
-            const promises = [];
-            $('.hotel-wrapper').each((index, element) => {
-                const hotelLink = $(element).find('.zenmobilegallery-photo-container').attr('href');
-                const name = $(element).find('.zen-hotelcard-name-link').text().trim();
-                const address = $(element).find('.zen-hotelcard-address').text().trim();
-                const locationValue = $(element).find('.zen-hotelcard-location-value').text().trim();
-                const locationFrom = $(element).find('.zen-hotelcard-distance').text().trim().split('\n')[1].trim();
-                const locationName = $(element).find('.zen-hotelcard-location-name').text().trim();
-                const prevImageUrls = $(element).find('.zenimage-content').attr('src');
-                hotels.push({ name, address, locationValue, locationFrom, locationName, hotelLink, prevImageUrls: [prevImageUrls] });
-                promises.push(this.fileService.downloadImage(prevImageUrls, prevImageUrls.split('/').pop().split('.')[0]), prevImageUrls.split('/').pop());
-            });
-
-            await Promise.all(promises);
-        };
-
-        await getHotels();
+        /*         const getHotels = async () => {
+                    const promises = [];
+                    $('.hotel-wrapper').each((index, element) => {
+                        const hotelLink = $(element).find('.zenmobilegallery-photo-container').attr('href');
+                        const name = $(element).find('.zen-hotelcard-name-link').text().trim();
+                        const address = $(element).find('.zen-hotelcard-address').text().trim();
+                        const locationValue = $(element).find('.zen-hotelcard-location-value').text().trim();
+                        const locationFrom = $(element).find('.zen-hotelcard-distance').text().trim().split('\n')[1].trim();
+                        const locationName = $(element).find('.zen-hotelcard-location-name').text().trim();
+                        const prevImageUrls = $(element).find('.zenimage-content').attr('src');
+                        hotels.push({ name, address, locationValue, locationFrom, locationName, hotelLink, prevImageUrls: [prevImageUrls] });
+                        promises.push(this.fileService.downloadImage(prevImageUrls, prevImageUrls.split('/').pop().split('.')[0]), prevImageUrls.split('/').pop());
+                    });
+        
+                    await Promise.all(promises);
+                };
+        
+                await getHotels(); */
+        await this.fileService.saveDataToJsonFile(data, `page_${page}.json`, 'pages')
         return data;
+    }
+
+    async parseRussianHotels(end: number) {
+        const promises = [];
+        for (let i = 1; i <= end; i++) {
+            promises.push(this.delayedParseHotelsByPage(i, i * 5000));
+        }
+        await Promise.all(promises);
+        return { success: true };
+    }
+    
+    delayedParseHotelsByPage(page: number, delay: number) {
+        return new Promise((resolve, reject) => {
+            setTimeout(async () => {
+                try {
+                    const data = await this.parseHotelsByPage(page);
+                    resolve(data);
+                } catch (error) {
+                    console.error('Ошибка при парсинге отелей на странице', page, ':', error);
+                    reject(error);
+                }
+            }, delay);
+        });
     }
 
     async getCountPageOfHotelsInCountry(country: string) {

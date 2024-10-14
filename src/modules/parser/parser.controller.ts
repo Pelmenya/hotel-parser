@@ -15,6 +15,11 @@ export class ParserController {
     return await this.parseService.parseHotelsByPage(params.page);
   }
 
+  @Get('russian-hotels')
+  async getRussianHotels(@Query() params: { page: number }): Promise<{ success: boolean }> {
+    return await this.parseService.parseRussianHotels(params.page);
+  }
+
   @Get('countries')
   async getCountries(): Promise<string> {
     return await this.parseService.parseCountries();
