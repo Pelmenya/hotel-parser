@@ -129,8 +129,9 @@ export class ParserService {
         });
     }
 
-    async getCountPageOfHotelsInCountry(country: string) {
+    async getPageRussianHotels(page: number) {
         // Реализуйте метод, если необходимо
+        return this.fileService.readDataFromJsonFile(`page_${page}.json`, 'pages')
     }
 
     async loadFullPageWithLocalProxy(url: string) {

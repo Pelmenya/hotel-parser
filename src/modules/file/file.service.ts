@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import axios from 'axios';
-import { createWriteStream, promises as fsPromises } from 'fs';
+import { createWriteStream, promises as fsPromises, readFile } from 'fs';
 import { join } from 'path';
 
 @Injectable()
@@ -55,4 +55,38 @@ export class FileService {
       console.error('Ошибка при записи JSON в файл:', error);
     }
   }
+
+  async readJsonFile(filename: string, folder: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const filePath = `${folder}/${filename}`;
+      readFile(filePath, 'utf8', (err, data) => {
+        if (err) {
+          reject(err);
+        } else {
+          try {
+            const jsonData = JSON.parse(data);
+            resolve(jsonData);
+          } catch (error) {
+            reject(error);
+          }
+        }
+      });
+    });
+
+
+  }
+  async readDataFromJsonFile(filename: string, folderPath: string) {
+    const fullFolderPath = join(__dirname, '..', 'uploads', folderPath || '');
+
+    try {
+      const jsonData = await this.readJsonFile(filename, fullFolderPath);
+      // Обработка данных из JSON-файла, например:
+      // console.log(jsonData);
+      return jsonData;
+    } catch (error) {
+      console.error('Ошибка при чтении данных из JSON-файла:', error);
+      throw new Error('Произошла ошибка при чтении данных из JSON-файла.');
+    }
+  }
+
 }
