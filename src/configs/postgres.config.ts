@@ -1,7 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
-import { Countries } from 'src/modules/country/countries.entity';
-import { Hotels } from 'src/modules/hotel/hotels.entity';
+import { Countries } from 'src/modules/countries/countries.entity';
+import { Hotels } from 'src/modules/hotels/hotels.entity';
 
 export const getPostgresConfig = async (
   configService: ConfigService,

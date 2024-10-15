@@ -8,7 +8,7 @@ export class HotelsRepository {
     constructor(
         @InjectRepository(Hotels)
         private hotelsRepository: Repository<Hotels>,
-    ) { }
+    ) {}
 
     async findAll(): Promise<Hotels[]> {
         return await this.hotelsRepository.find();
@@ -23,8 +23,11 @@ export class HotelsRepository {
     }
 
     async create(hotel: Partial<Hotels>): Promise<Hotels> {
-        const newCountry = this.hotelsRepository.create(hotel);
-        return await this.hotelsRepository.save(newCountry);
+        const newHotel = this.hotelsRepository.create(hotel);
+        return await this.hotelsRepository.save(newHotel);
     }
 
+    async findByNameAndAddress(name: string, address: string): Promise<Hotels | undefined> {
+        return this.hotelsRepository.findOne({ where: { name, address } });
+    }
 }

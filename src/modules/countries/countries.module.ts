@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { CountriesRepository } from './ountries.repository';
+import { CountriesRepository } from './countries.repository';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Countries } from './countries.entity';
 

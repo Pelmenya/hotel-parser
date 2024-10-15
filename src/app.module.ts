@@ -4,9 +4,9 @@ import { PostgresModule } from './modules/postgres/postgres.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ParserModule } from './modules/parser/parser.module';
-import { CountryModule } from './modules/country/countries.module';
-import { HotelsModule } from './modules/hotel/hotels.module';
-import { FilesModule } from './modules/file/files.module';
+import { CountryModule } from './modules/countries/countries.module';
+import { HotelsModule } from './modules/hotels/hotels.module';
+import { FilesModule } from './modules/files/files.module';
 
 @Module({
   imports: [
