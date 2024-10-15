@@ -3,9 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import * as puppeteer from 'puppeteer';
 import * as cheerio from 'cheerio';
-import { CountryRepository } from '../country/country.repository';
-import { HotelRepository } from '../hotel/hotel.repository';
-import { FileService } from '../file/file.service';
+import { CountriesRepository } from '../country/ountries.repository';
+import { HotelsRepository } from '../hotel/hotels.repository';
+import { FilesService } from '../file/files.service';
 import { SocksProxyAgent } from 'socks-proxy-agent';
 
 export type TParserLoadContent = 'puppeteer' | 'axios';
@@ -16,9 +16,9 @@ export class ParserService {
     private proxyUrl: string;
     constructor(
         private readonly configService: ConfigService,
-        private readonly fileService: FileService,
-        private readonly countriesRepository: CountryRepository,
-        private readonly hotelRepository: HotelRepository,
+        private readonly filesService: FilesService,
+        private readonly countriesRepository: CountriesRepository,
+        private readonly hotelsRepository: HotelsRepository,
     ) {
         const proxyHost = this.configService.get('PROXY_HOST');
         const proxyPort = this.configService.get('PROXY_PORT');
@@ -35,6 +35,15 @@ export class ParserService {
         });
 
         this.checkIP();
+    }
+    private extractBase64Svgs(cssContent: string): string[] {
+        const base64Matches = cssContent.match(/url$$data:image\/svg\+xml;base64,([^)]+)$$/g);
+        if (!base64Matches) return [];
+
+        return base64Matches.map(match => {
+            const base64String = match.split(',')[1].slice(0, -1); // remove trailing parenthesis
+            return Buffer.from(base64String, 'base64').toString('utf8');
+        });
     }
 
     async parsePage(params: any = '', type: TParserLoadContent = 'axios') {
@@ -81,28 +90,7 @@ export class ParserService {
 
     async parseHotelsByPage(page: number) {
         const data = await this.parsePage(`?page=${page}`);
-        const $ = cheerio.load(data);
-        const hotels: any[] = [];
-
-        /*         const getHotels = async () => {
-                    const promises = [];
-                    $('.hotel-wrapper').each((index, element) => {
-                        const hotelLink = $(element).find('.zenmobilegallery-photo-container').attr('href');
-                        const name = $(element).find('.zen-hotelcard-name-link').text().trim();
-                        const address = $(element).find('.zen-hotelcard-address').text().trim();
-                        const locationValue = $(element).find('.zen-hotelcard-location-value').text().trim();
-                        const locationFrom = $(element).find('.zen-hotelcard-distance').text().trim().split('\n')[1].trim();
-                        const locationName = $(element).find('.zen-hotelcard-location-name').text().trim();
-                        const prevImageUrls = $(element).find('.zenimage-content').attr('src');
-                        hotels.push({ name, address, locationValue, locationFrom, locationName, hotelLink, prevImageUrls: [prevImageUrls] });
-                        promises.push(this.fileService.downloadImage(prevImageUrls, prevImageUrls.split('/').pop().split('.')[0]), prevImageUrls.split('/').pop());
-                    });
-        
-                    await Promise.all(promises);
-                };
-        
-                await getHotels(); */
-        await this.fileService.saveDataToJsonFile(data, `page_${page}.json`, 'pages')
+        await this.filesService.saveDataToJsonFile(data, `page_${page}.json`, 'pages')
         return data;
     }
 
@@ -114,7 +102,7 @@ export class ParserService {
         await Promise.all(promises);
         return { success: true };
     }
-    
+
     delayedParseHotelsByPage(page: number, delay: number) {
         return new Promise((resolve, reject) => {
             setTimeout(async () => {
@@ -129,9 +117,8 @@ export class ParserService {
         });
     }
 
-    async getPageRussianHotels(page: number) {
-        // Реализуйте метод, если необходимо
-        return this.fileService.readDataFromJsonFile(`page_${page}.json`, 'pages')
+    async readDataPageRussianHotelsFromJson(page: number) {
+        return this.filesService.readDataFromJsonFile(`page_${page}.json`, 'pages')
     }
 
     async loadFullPageWithLocalProxy(url: string) {
@@ -150,6 +137,68 @@ export class ParserService {
         await browser.close();
         return content;
     }
+
+    async getHotelsFromPages() {
+        const data = await this.readDataPageRussianHotelsFromJson(1);
+        const $ = cheerio.load(data);
+        const hotels: any = []
+        const getHotels = async () => {
+            const promises = [];
+            $('.hotel-wrapper').each((index, element) => {
+                const hotel_link_ostrovok = $(element).find('.zenmobilegallery-photo-container').attr('href');
+                const name = $(element).find('.zen-hotelcard-name-link').text().trim();
+                const address = $(element).find('.zen-hotelcard-address').text().trim();
+                const location_value = $(element).find('.zen-hotelcard-location-value').text().trim();
+                const location_from = $(element).find('.zen-hotelcard-distance').text().trim().split('\n')[1].trim();
+                const location_name = $(element).find('.zen-hotelcard-location-name').text().trim();
+                const prev_image_urls = $(element).find('.zenimage-content').attr('src');
+                const stars = $(element).find('.zen-ui-stars').children('.zen-ui-stars-wrapper');
+
+                hotels.push({ name, address, location_value, location_from, location_name, hotel_link_ostrovok, prevImageUrls: [prev_image_urls], stars: stars.length });
+                const promise = this.hotelsRepository.create({
+                    name,
+                    address,
+                    location_value,
+                    location_from,
+                    location_name,
+                    hotel_link_ostrovok,
+                    prev_image_urls: [prev_image_urls],
+                    stars: stars.length
+                });
+                promises.push(promise);
+
+                //promises.push(this.filesService.downloadImage(prevImageUrls, 'prev_images/'+ prevImageUrls.split('/').pop().split('.')[0]));
+            });
+            await Promise.all(promises);
+        };
+        await getHotels();
+
+
+        return hotels;
+    }
+
+    async extractSvgIconsFromCss(page: number): Promise<any> {
+        try {
+            const data = await this.filesService.readDataFromJsonFile(`page_${page}.json`, 'pages')
+            const $ = cheerio.load(data);
+            const styleTags = $('style');
+
+            styleTags.each((index, element) => {
+                const cssContent = $(element).html();
+                const svgIcons = this.extractBase64Svgs(cssContent);
+
+                svgIcons.forEach((svg, idx) => {
+                    const filePath = `icon_${index}_${idx}.svg`;
+                    this.filesService.saveDataToFile(svg, filePath, 'icons');
+                    console.log(`SVG icon saved to ${filePath}`);
+                });
+            });
+            return Promise.resolve({ succes: true })
+        } catch (error) {
+            console.error('Error extracting SVG icons:', error);
+        }
+    }
+
 
     async checkIP() {
         try {

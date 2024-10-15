@@ -14,15 +14,26 @@ export class ParserController {
   async getHotels(@Query() params: { page: number }): Promise<any> {
     return await this.parseService.parseHotelsByPage(params.page);
   }
-
+  // парсит в файлы все страницы отеле до page number
   @Get('russian-hotels')
   async getRussianHotels(@Query() params: { page: number }): Promise<{ success: boolean }> {
     return await this.parseService.parseRussianHotels(params.page);
   }
 
+  // читает данные страницы отелей из созданного json файла при парсинге, для дальнейшей обработки или просмотра
   @Get('russian-hotel')
   async getRussianHotel(@Query() params: { page: number }): Promise<{ success: boolean }> {
-    return await this.parseService.getPageRussianHotels(params.page);
+    return await this.parseService.readDataPageRussianHotelsFromJson(params.page);
+  }
+  
+  @Get('page-svg')
+  async getSvg(@Query() params: { page: number }): Promise<{ success: boolean }> {
+    return await this.parseService.extractSvgIconsFromCss(params.page);
+  }
+
+  @Get('hotels')
+  async getHotelsFromPages(): Promise<any> {
+    return await this.parseService.getHotelsFromPages();
   }
 
   @Get('countries')

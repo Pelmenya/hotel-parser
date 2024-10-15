@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
-import { CountryRepository } from './country.repository';
+import { CountryRepository } from './ountries.repository';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Country } from './country.entity';
+import { Country } from './countries.entity';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Country])],

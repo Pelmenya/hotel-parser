@@ -1,7 +1,7 @@
 import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()
-export class Country {
+export class Countries {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -15,5 +15,5 @@ export class Country {
   location?: string;
 
   @Column("simple-array", { default: null })
-  imageUrls?: string[];
+  image_urls?: string[];
 }

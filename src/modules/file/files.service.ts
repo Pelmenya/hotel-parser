@@ -4,7 +4,7 @@ import { createWriteStream, promises as fsPromises, readFile } from 'fs';
 import { join } from 'path';
 
 @Injectable()
-export class FileService {
+export class FilesService {
   async downloadImage(url: string, folderPath: string): Promise<string> {
     const filename = url.split('/').pop();
     if (!filename) {
@@ -34,6 +34,25 @@ export class FileService {
       writer.on('finish', () => resolve(path));
       writer.on('error', reject);
     });
+  }
+
+  async saveDataToFile(data: any, filename: string, folderPath: string): Promise<void> {
+    const fullFolderPath = join(__dirname, '..', 'uploads', folderPath || '');
+
+    try {
+      await fsPromises.mkdir(fullFolderPath, { recursive: true });
+    } catch (error) {
+      throw new Error('Ошибка при создании каталога: ' + error.message);
+    }
+
+    const filePath = join(fullFolderPath, filename);
+
+    try {
+      await fsPromises.writeFile(filePath, data, 'utf8');
+      console.log(`Данные успешно записаны в ${filePath}`);
+    } catch (error) {
+      console.error('Ошибка при записи в файл:', error);
+    }
   }
 
   async saveDataToJsonFile(data: any, filename: string, folderPath: string): Promise<void> {
@@ -85,7 +104,7 @@ export class FileService {
       return jsonData;
     } catch (error) {
       console.error('Ошибка при чтении данных из JSON-файла:', error);
-      throw new Error('Произошла ошибка при чтении данных из JSON-файла.');
+      return Promise.resolve('Произошла ошибка при чтении данных из JSON-файла.');
     }
   }
 

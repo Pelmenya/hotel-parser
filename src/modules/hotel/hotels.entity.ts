@@ -2,7 +2,7 @@ import { Entity, Column, PrimaryGeneratedColumn, Index } from 'typeorm';
 
 @Entity()
 @Index(["name", "address"], { unique: true })
-export class Hotel {
+export class Hotels {
     @PrimaryGeneratedColumn("uuid")
     id: string;
 
@@ -13,17 +13,26 @@ export class Hotel {
     address: string;
 
     @Column({ default: null })
-    locationValue: string;
+    location_value: string;
 
     @Column({ default: null })
-    locationFrom: string;
+    location_from: string;
 
     @Column({ default: null })
-    locationName: string;
+    hotel_link_ostrovok: string;
+
+    @Column({ default: null })
+    location_name: string;
 
     @Column({ default: null })
     stars: number;
 
     @Column("simple-array", { default: null })
-    prevImageUrls?: string[];
+    prev_image_urls?: string[];
+
+    @Column({ default: new Date() })
+    created_at: Date;
+
+    @Column({ default: new Date() })
+    updated_at: Date;
 }

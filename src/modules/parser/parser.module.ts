@@ -2,12 +2,12 @@ import { Module } from '@nestjs/common';
 import { ParserController } from './parser.controller';
 import { ParserService } from './parser.service';
 import { ConfigModule } from '@nestjs/config';
-import { CountryModule } from '../country/country.module';
-import { FileModule } from '../file/file.module';
-import { HotelModule } from '../hotel/hotel.module';
+import { CountryModule } from '../country/countries.module';
+import { FilesModule } from '../file/files.module';
+import { HotelsModule } from '../hotel/hotels.module';
 
 @Module({
-  imports: [ConfigModule, CountryModule, HotelModule, FileModule],
+  imports: [ConfigModule, CountryModule, HotelsModule, FilesModule],
   controllers: [ParserController],
   providers: [ParserService]
 })
