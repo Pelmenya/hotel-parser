@@ -171,39 +171,50 @@ export class ParserService {
         return districts;
     }
 
-    async updateDistrictCountPage(name: string, link: string) {
+    async updateDistrictCountPageAndRegion(name: string, link: string) {
         const data = await this.parsePage('/' + link.split('/')[3]);
         const $ = cheerio.load(data);
         const count = $('.Pagination_item__lBv39')[$('.Pagination_item__lBv39').length - 1]
         const onePage = $('.ResultBanner_header__GiOTH')
-        const headOne = $('.heading-summary-hotels')
-        return $(count).text().trim() ?  $(count).text().trim() : ($(onePage).text().trim() || $(headOne).text().trim())  ? '1' : '0';
+        const headOne = $('.SearchInfo_region__D0BK1');
+        const headTwo = $('.zen-regioninfo-region');
+        const headThree = $('.heading-summary-hotels');
+
+        return {
+            countPages
+                : $(count).text().trim()
+                    ? $(count).text().trim()
+                    : ($(onePage).text().trim() || $(headOne).text().trim())
+                        ? '1' : '0',
+            region: $(headOne).text().trim() || $(headTwo).text().trim() || $(headThree).text().trim() || null
+        };
     }
 
     async updateDistrictCounts() {
         try {
             const districts = await this.districtsRepository.findAll();
-            const districtsToUpdate = districts.filter(d => d.count_pages === null)//.slice(0, 1000); // Берем только первые 10 записей
-    
+            const districtsToUpdate = districts.filter(d => d.count_pages === null)//.slice(0, 10); // Берем только первые 10 записей
+
             for (const district of districtsToUpdate) {
                 const { name, district_link_ostrovok } = district;
                 try {
-                    const countPagesString = await this.updateDistrictCountPage(name, district_link_ostrovok);
-                    const countPages = parseInt(countPagesString, 10);
-    
+                    const data = await this.updateDistrictCountPageAndRegion(name, district_link_ostrovok);
+                    const countPages = parseInt(data.countPages, 10);
+                    const region = data.region;
+
                     if (!isNaN(countPages)) {
-                        await this.districtsRepository.updateCountPages(district.id, countPages);
-                        console.log(`Updated district "${name}" with count_pages: ${countPages}`);
+                        await this.districtsRepository.updateCountPages(district.id, countPages, region);
+                        console.log(`Updated district "${name}" with count_pages: ${countPages} and region ${region}`);
                     } else {
-                        console.warn(`Failed to parse count_pages for district "${name}", received: ${countPagesString}`);
+                        console.warn(`Failed to parse count_pages for district "${name}", received: ${countPages}`);
                     }
                 } catch (error) {
                     console.error(`Error updating district "${name}":`, error);
                 }
-    
+
                 await this.delay(0); // Задержка в 0 секунд между обработкой записей
             }
-    
+
             console.log('Обновление 1000 записей завершено');
         } catch (error) {
             console.error('Ошибка при обновлении записей:', error);

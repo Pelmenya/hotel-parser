@@ -11,6 +11,10 @@ export class Districts {
     name: string;
 
     @Column({ nullable: true })
+    @Index() // Индекс для ускорения поиска по региону
+    region: string;
+
+    @Column({ nullable: true })
     description?: string;
 
     // Тип данных 'geography' для PostGIS с координатами полигона

@@ -31,8 +31,8 @@ export class DistrictsRepository {
         return this.districtsRepository.findOne({ where: { name, district_link_ostrovok } });
     }
 
-    async updateCountPages(id: string, countPages: number): Promise<void> {
-        await this.districtsRepository.update(id, { count_pages: countPages });
+    async updateCountPages(id: string, countPages: number, region: string | null): Promise<void> {
+        await this.districtsRepository.update(id, { count_pages: countPages, region });
     }
-    
+
 }
