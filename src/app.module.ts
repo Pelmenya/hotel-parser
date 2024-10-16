@@ -7,6 +7,7 @@ import { ParserModule } from './modules/parser/parser.module';
 import { CountryModule } from './modules/countries/countries.module';
 import { HotelsModule } from './modules/hotels/hotels.module';
 import { FilesModule } from './modules/files/files.module';
+import { DistrictsModule } from './modules/districts/districts.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { FilesModule } from './modules/files/files.module';
     CountryModule,
     HotelsModule,
     FilesModule,
+    DistrictsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

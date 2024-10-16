@@ -1,6 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { Countries } from 'src/modules/countries/countries.entity';
+import { Districts } from 'src/modules/districts/districts.entity';
 import { Hotels } from 'src/modules/hotels/hotels.entity';
 
 export const getPostgresConfig = async (
@@ -13,7 +14,11 @@ export const getPostgresConfig = async (
     username: configService.get('POSTGRES_USER'),
     password: configService.get('POSTGRES_PASSWORD'),
     database: configService.get('POSTGRES_DB'),
-    entities: [Countries, Hotels],
+    entities: [
+      Countries, 
+      Hotels, 
+      Districts
+    ],
     synchronize: true,
   };
 };

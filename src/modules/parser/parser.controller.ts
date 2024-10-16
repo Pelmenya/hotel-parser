@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, HttpCode, Post, Query } from '@nestjs/common';
 import { ParserService } from './parser.service';
 
 @Controller('parser')
@@ -10,14 +10,15 @@ export class ParserController {
     return await this.parseService.parsePage({ page: params.page });
   }
 
-  @Get('hotel')
+  @Get('hotels')
   async getHotels(@Query() params: { page: number }): Promise<any> {
     return await this.parseService.parseHotelsByPage(params.page);
   }
-  // парсит в файлы все страницы отеле до page number
-  @Get('russian-hotels')
-  async getRussianHotels(@Query() params: { page: number }): Promise<{ success: boolean }> {
-    return await this.parseService.parseRussianHotels(params.page);
+  // парсит в файлы все страницы отелей от start number до end number
+  @Post('russian-hotels')
+  @HttpCode(200)
+  async getRussianHotels(@Query() params: { start: number; end: number }): Promise<{ success: boolean }> {
+    return await this.parseService.parseRussianHotels(params.start, params.end);
   }
 
   // читает данные страницы отелей из созданного json файла при парсинге, для дальнейшей обработки или просмотра
@@ -25,13 +26,14 @@ export class ParserController {
   async getRussianHotel(@Query() params: { page: number }): Promise<{ success: boolean }> {
     return await this.parseService.readDataPageRussianHotelsFromJson(params.page);
   }
-  
+
   @Get('page-svg')
   async getSvg(@Query() params: { page: number }): Promise<{ success: boolean }> {
     return await this.parseService.extractSvgIconsFromCss(params.page);
   }
 
-  @Get('hotels')
+  @Post('hotels-from-pages')
+  @HttpCode(200)
   async getHotelsFromPages(): Promise<any> {
     return await this.parseService.getHotelsFromPages();
   }
