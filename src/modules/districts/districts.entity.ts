@@ -26,7 +26,7 @@ export class Districts {
     @OneToMany(() => Districts, (district) => district.parent, { nullable: true })
     children?: Districts[]; // Поле может быть пустым, если у района нет детей
 
-    @Column({ default: 1 })
+    @Column({ nullable: true })
     count_pages: number;
 
     @Column("simple-array", { nullable: true })

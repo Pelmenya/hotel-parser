@@ -171,6 +171,45 @@ export class ParserService {
         return districts;
     }
 
+    async updateDistrictCountPage(name: string, link: string) {
+        const data = await this.parsePage('/' + link.split('/')[3]);
+        const $ = cheerio.load(data);
+        const count = $('.Pagination_item__lBv39')[$('.Pagination_item__lBv39').length - 1]
+        const onePage = $('.ResultBanner_header__GiOTH')
+        const headOne = $('.heading-summary-hotels')
+        return $(count).text().trim() ?  $(count).text().trim() : ($(onePage).text().trim() || $(headOne).text().trim())  ? '1' : '0';
+    }
+
+    async updateDistrictCounts() {
+        try {
+            const districts = await this.districtsRepository.findAll();
+            const districtsToUpdate = districts.filter(d => d.count_pages === null)//.slice(0, 1000); // Берем только первые 10 записей
+    
+            for (const district of districtsToUpdate) {
+                const { name, district_link_ostrovok } = district;
+                try {
+                    const countPagesString = await this.updateDistrictCountPage(name, district_link_ostrovok);
+                    const countPages = parseInt(countPagesString, 10);
+    
+                    if (!isNaN(countPages)) {
+                        await this.districtsRepository.updateCountPages(district.id, countPages);
+                        console.log(`Updated district "${name}" with count_pages: ${countPages}`);
+                    } else {
+                        console.warn(`Failed to parse count_pages for district "${name}", received: ${countPagesString}`);
+                    }
+                } catch (error) {
+                    console.error(`Error updating district "${name}":`, error);
+                }
+    
+                await this.delay(0); // Задержка в 0 секунд между обработкой записей
+            }
+    
+            console.log('Обновление 1000 записей завершено');
+        } catch (error) {
+            console.error('Ошибка при обновлении записей:', error);
+        }
+    }
+
     async getHotelsFromPages() {
         const totalPages = 391;
         const batchSize = 10; // Количество страниц для обработки за раз

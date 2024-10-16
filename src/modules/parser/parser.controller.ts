@@ -1,4 +1,4 @@
-import { Controller, Get, HttpCode, Post, Query } from '@nestjs/common';
+import { Controller, Get, HttpCode, Post, Put, Query } from '@nestjs/common';
 import { ParserService } from './parser.service';
 
 @Controller('parser')
@@ -43,6 +43,12 @@ export class ParserController {
   @HttpCode(200)
   async getDistrictsFromPages(): Promise<any> {
     return await this.parseService.getDistrictsFromPages();
+  }
+
+  @Put('districts-count-page')
+  @HttpCode(200)
+  async updateDistrictCountPage(): Promise<any> {
+    return await this.parseService.updateDistrictCounts();
   }
 
   @Get('countries')
