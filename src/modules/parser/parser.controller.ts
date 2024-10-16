@@ -14,6 +14,7 @@ export class ParserController {
   async getHotels(@Query() params: { page: number }): Promise<any> {
     return await this.parseService.parseHotelsByPage(params.page);
   }
+
   // парсит в файлы все страницы отелей от start number до end number
   @Post('russian-hotels')
   @HttpCode(200)
@@ -36,6 +37,12 @@ export class ParserController {
   @HttpCode(200)
   async getHotelsFromPages(): Promise<any> {
     return await this.parseService.getHotelsFromPages();
+  }
+
+  @Post('districts')
+  @HttpCode(200)
+  async getDistrictsFromPages(): Promise<any> {
+    return await this.parseService.getDistrictsFromPages();
   }
 
   @Get('countries')

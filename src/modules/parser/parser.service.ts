@@ -7,6 +7,7 @@ import { FilesService } from '../files/files.service';
 import { CountriesRepository } from '../countries/countries.repository';
 import { HotelsRepository } from '../hotels/hotels.repository';
 import { SocksProxyAgent } from 'socks-proxy-agent';
+import { DistrictsRepository } from '../districts/districts.repository';
 
 export type TParserLoadContent = 'puppeteer' | 'axios';
 
@@ -20,6 +21,7 @@ export class ParserService {
         private readonly filesService: FilesService,
         private readonly countriesRepository: CountriesRepository,
         private readonly hotelsRepository: HotelsRepository,
+        private readonly districtsRepository: DistrictsRepository,
     ) {
         const proxyHost = this.configService.get('PROXY_HOST');
         const proxyPort = this.configService.get('PROXY_PORT');
@@ -119,6 +121,54 @@ export class ParserService {
 
         await browser.close();
         return content;
+    }
+
+    async getDistrictsFromPages() {
+        const totalPages = 774;
+        const batchSize = 10; // Количество страниц для обработки за раз
+        const districts: any[] = [];
+
+        const parseAndStoreDistrictsFromPage = async (page: number) => {
+            try {
+                const data = await this.readDataPageRussianHotelsFromJson(page);
+                const $ = cheerio.load(data);
+
+                const pagePromises = $('.item__title').map(async (index, element) => {
+                    const district_link_ostrovok = $(element).attr('href') || '';
+                    const name = $(element).text()?.trim() || '';
+
+                    const districtData = {
+                        name,
+                        district_link_ostrovok
+                    };
+
+                    const existingDistrict = await this.districtsRepository.findByNameAndLink(name, district_link_ostrovok);
+
+                    if (!existingDistrict) {
+                        await this.districtsRepository.create(districtData);
+                        districts.push(districtData);
+                    } else {
+                        console.log(`District already exists: ${name}, ${district_link_ostrovok}`);
+                    }
+                }).get();
+
+                await Promise.all(pagePromises);
+            } catch (error) {
+                console.error(`Ошибка при обработке страницы ${page}:`, error);
+            }
+        };
+
+        for (let i = 0; i < totalPages; i += batchSize) {
+            const batchPromises = [];
+            for (let j = 0; j < batchSize && i + j < totalPages; j++) {
+                batchPromises.push(parseAndStoreDistrictsFromPage(i + j + 1));
+            }
+            await Promise.all(batchPromises);
+            console.log(`Processed batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(totalPages / batchSize)}`);
+        }
+
+        console.log('Обработка всех страниц завершена');
+        return districts;
     }
 
     async getHotelsFromPages() {

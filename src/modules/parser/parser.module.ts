@@ -5,9 +5,10 @@ import { ConfigModule } from '@nestjs/config';
 import { CountryModule } from '../countries/countries.module';
 import { FilesModule } from '../files/files.module';
 import { HotelsModule } from '../hotels/hotels.module';
+import { DistrictsModule } from '../districts/districts.module';
 
 @Module({
-  imports: [ConfigModule, CountryModule, HotelsModule, FilesModule],
+  imports: [ConfigModule, CountryModule, HotelsModule, DistrictsModule, FilesModule],
   controllers: [ParserController],
   providers: [ParserService]
 })

@@ -1,11 +1,12 @@
 import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, OneToMany, Index, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity()
+@Index(['name', 'district_link_ostrovok'], { unique: true })
 export class Districts {
-    @PrimaryGeneratedColumn("uuid")
+    @PrimaryGeneratedColumn('uuid')
     id: string;
 
-    @Column({ unique: true })
+    @Column()
     @Index() // Индекс для ускорения поиска по имени
     name: string;
 
@@ -36,5 +37,4 @@ export class Districts {
 
     @UpdateDateColumn({ type: 'timestamp' }) // Автоматическое обновление даты изменения
     updated_at: Date;
-
 }
