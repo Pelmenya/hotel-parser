@@ -1,4 +1,4 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, OneToMany, Index } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, OneToMany, Index, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity()
 export class Districts {
@@ -30,4 +30,11 @@ export class Districts {
 
     @Column("simple-array", { nullable: true })
     image_urls?: string[];
+
+    @CreateDateColumn({ type: 'timestamp' }) // Автоматическое заполнение даты создания
+    created_at: Date;
+
+    @UpdateDateColumn({ type: 'timestamp' }) // Автоматическое обновление даты изменения
+    updated_at: Date;
+
 }

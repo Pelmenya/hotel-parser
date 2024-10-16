@@ -1,4 +1,4 @@
-import { Entity, Column, PrimaryGeneratedColumn, Index } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, Index, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity()
 @Index(["name", "address"], { unique: true })
@@ -12,27 +12,27 @@ export class Hotels {
     @Column()
     address: string;
 
-    @Column({ default: null })
-    location_value: string;
+    @Column({ nullable: true }) // Используем nullable для демонстрации возможности null
+    location_value?: string;
 
-    @Column({ default: null })
-    location_from: string;
+    @Column({ nullable: true })
+    location_from?: string;
 
-    @Column({ default: null })
-    hotel_link_ostrovok: string;
+    @Column({ nullable: true })
+    hotel_link_ostrovok?: string;
 
-    @Column({ default: null })
-    location_name: string;
+    @Column({ nullable: true })
+    location_name?: string;
 
-    @Column({ default: null })
-    stars: number;
+    @Column({ type: 'int', nullable: true }) // Указываем тип для числа
+    stars?: number;
 
-    @Column("simple-array", { default: null })
+    @Column("simple-array", { nullable: true })
     prev_image_urls?: string[];
 
-    @Column({ default: new Date() })
+    @CreateDateColumn({ type: 'timestamp' }) // Автоматическое заполнение даты создания
     created_at: Date;
 
-    @Column({ default: new Date() })
+    @UpdateDateColumn({ type: 'timestamp' }) // Автоматическое обновление даты изменения
     updated_at: Date;
 }
