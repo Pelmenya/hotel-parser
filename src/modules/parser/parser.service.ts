@@ -174,39 +174,63 @@ export class ParserService {
     async updateDistrictCountPageAndRegion(name: string, link: string) {
         const data = await this.parsePage('/' + link.split('/')[3]);
         const $ = cheerio.load(data);
-        const count = $('.Pagination_item__lBv39')[$('.Pagination_item__lBv39').length - 1]
-        const onePage = $('.ResultBanner_header__GiOTH')
+    
+        let resCountPage = null;
+    
+        const count = Number($($('.Pagination_item__lBv39').last()).text().trim());
+        const countTwo = Number($($('.zen-pagination-item-value').last()).text().trim());
+    
+        if (count > 0) {
+            resCountPage = count;
+        } else if (countTwo > 0) {
+            resCountPage = countTwo;
+        }
+    
         const headOne = $('.SearchInfo_region__D0BK1');
         const headTwo = $('.zen-regioninfo-region');
-        const headThree = $('.heading-summary-hotels');
-
+    
+        const countHotels = $('.heading-summary-hotels').text().trim();
+        const countHotelsTwo = $('.ResultBanner_header__GiOTH').text().trim();
+    
+        const extractNumber = (text: string) => {
+            const match = text.match(/\d+/);
+            return match ? parseInt(match[0], 10) : null;
+        };
+    
+        const countHotelsNumber = extractNumber(countHotels) || extractNumber(countHotelsTwo) || 0;
+    
+        // Устанавливаем количество страниц в 1, если есть гостиницы и количество страниц не определено
+        if (countHotelsNumber > 0 && resCountPage === null) {
+            resCountPage = '1';
+        } else if (!resCountPage) {
+            resCountPage = '0';
+        }
+    
         return {
-            countPages
-                : $(count).text().trim()
-                    ? $(count).text().trim()
-                    : ($(onePage).text().trim() || $(headOne).text().trim())
-                        ? '1' : '0',
-            region: $(headOne).text().trim() || $(headTwo).text().trim() || $(headThree).text().trim() || null
+            count_pages: resCountPage,
+            region: headOne.text().trim() || headTwo.text().trim() || null,
+            count_hotels: countHotelsNumber
         };
     }
-
+        
     async updateDistrictCounts() {
         try {
             const districts = await this.districtsRepository.findAll();
-            const districtsToUpdate = districts.filter(d => d.count_pages === null)//.slice(0, 10); // Берем только первые 10 записей
+            const districtsToUpdate = districts.filter(d => d.count_pages === null);//.slice(0, 10); // Берем только первые 10 записей
 
             for (const district of districtsToUpdate) {
                 const { name, district_link_ostrovok } = district;
                 try {
                     const data = await this.updateDistrictCountPageAndRegion(name, district_link_ostrovok);
-                    const countPages = parseInt(data.countPages, 10);
-                    const region = data.region;
+                    const count_pages = parseInt(data.count_pages, 10);
+                    const { region, count_hotels } = data;
 
-                    if (!isNaN(countPages)) {
-                        await this.districtsRepository.updateCountPages(district.id, countPages, region);
-                        console.log(`Updated district "${name}" with count_pages: ${countPages} and region ${region}`);
+
+                    if (!isNaN(count_pages)) {
+                        await this.districtsRepository.updateCountPages(district.id, count_pages, region, count_hotels);
+                        console.log(`Updated district "${name}" with pages: ${count_pages} and region: ${region} hotels: ${count_hotels}`);
                     } else {
-                        console.warn(`Failed to parse count_pages for district "${name}", received: ${countPages}`);
+                        console.warn(`Failed to parse count_pages for district "${name}", received: ${count_pages}`);
                     }
                 } catch (error) {
                     console.error(`Error updating district "${name}":`, error);

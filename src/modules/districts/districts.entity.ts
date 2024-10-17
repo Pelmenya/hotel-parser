@@ -33,6 +33,9 @@ export class Districts {
     @Column({ nullable: true })
     count_pages: number;
 
+    @Column({ nullable: true })
+    count_hotels: number;
+
     @Column("simple-array", { nullable: true })
     image_urls?: string[];
 
