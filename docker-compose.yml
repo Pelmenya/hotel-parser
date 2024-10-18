@@ -29,19 +29,18 @@ services:
     networks:
       - custom_network 
 
-  hotel-parser:
+  hotel-parser-1:
     build: ./ 
-    container_name: hotel-parser
+    container_name: hotel-parser-1
     volumes:
       - .:/app
       - /app/node_modules
     ports:
-      - ${DEV_PORT}:3000
+      - ${DEV_PORT_1}:3000
     depends_on:
       - postgres_postgis_parser
-      - 3proxy
     environment:
-      PORT: ${DEV_PORT}
+      PORT: ${DEV_PORT_1}
       SECRET: ${SECRET}
       IS_DEV: "true"
       BASE_PARSE_URL: ${BASE_PARSE_URL}
@@ -50,21 +49,45 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+      PROXY_ID: ${PROXY_ID_1}
+      PROXY_HOST: ${PROXY_HOST_1}
+      PROXY_PORT: ${PROXY_PORT_1}
+      PROXY_LOGIN: ${PROXY_LOGIN_1}
+      PROXY_PASSWORD: ${PROXY_PASSWORD_1}
     working_dir: /app
     command: sh -c "cd /app; rm -rf dist; npm install; npm run start:dev"
     networks:
       - custom_network
 
-  3proxy:
-    build: ./3proxy
-    container_name: 3proxy
+  hotel-parser-2:
+    build: ./ 
+    container_name: hotel-parser-2
+    volumes:
+      - .:/app
+      - /app/node_modules
     ports:
-      - "1080:1080"
+      - ${DEV_PORT_2}:3000
+    depends_on:
+      - postgres_postgis_parser
+    environment:
+      PORT: ${DEV_PORT_2}
+      SECRET: ${SECRET}
+      IS_DEV: "true"
+      BASE_PARSE_URL: ${BASE_PARSE_URL}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      PROXY_ID: ${PROXY_ID_2}
+      PROXY_HOST: ${PROXY_HOST_2}
+      PROXY_PORT: ${PROXY_PORT_2}
+      PROXY_LOGIN: ${PROXY_LOGIN_2}
+      PROXY_PASSWORD: ${PROXY_PASSWORD_2}
+    working_dir: /app
+    command: sh -c "cd /app; rm -rf dist; npm install; npm run start:dev"
     networks:
       - custom_network
-    environment:
-      PROXY_LOGIN: ${PROXY_LOGIN}
-      PROXY_PASSWORD: ${PROXY_PASSWORD}
 
 volumes:
   postgres_data_parser:
