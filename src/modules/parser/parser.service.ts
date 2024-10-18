@@ -15,7 +15,8 @@ export type TParserLoadContent = 'puppeteer' | 'axios';
 export class ParserService {
     private axiosInstance: any;
     private proxyUrl: string;
-
+    private instanceId: 1;
+    private totalInstances: 1;
     constructor(
         private readonly configService: ConfigService,
         private readonly filesService: FilesService,
@@ -27,7 +28,9 @@ export class ParserService {
         const proxyPort = this.configService.get('PROXY_PORT');
         const proxyUsername = this.configService.get('PROXY_LOGIN');
         const proxyPassword = this.configService.get('PROXY_PASSWORD');
-
+        this.instanceId = this.configService.get('INSTANCE_ID');
+        this.instanceId = this.configService.get('INSTANCE_ID');
+        this.totalInstances = this.configService.get('TOTAL_INSTANCES');
         this.proxyUrl = `socks5://${proxyUsername}:${proxyPassword}@${proxyHost}:${proxyPort}`;
 
         const socksAgent = new SocksProxyAgent(this.proxyUrl);
@@ -215,10 +218,26 @@ export class ParserService {
         
     async updateDistrictCounts() {
         try {
+            const instanceId = this.instanceId; // Получаем идентификатор инстанса
+            const totalInstances = this.totalInstances; // Получаем общее количество инстансов
             const districts = await this.districtsRepository.findAll();
-            const districtsToUpdate = districts.filter(d => d.count_pages === null);//.slice(0, 10); // Берем только первые 10 записей
-
-            for (const district of districtsToUpdate) {
+    
+            // Сортируем районы по ID (UUID) в лексикографическом порядке
+            districts.sort((a, b) => a.id.localeCompare(b.id));
+    
+            const districtsToUpdate = districts.filter(d => d.count_pages === null);
+    
+            // Определяем размер группы
+            const groupSize = Math.ceil(districtsToUpdate.length / totalInstances);
+    
+            // Вычисляем начальный и конечный индекс для текущего инстанса
+            const startIndex = (instanceId - 1) * groupSize;
+            const endIndex = startIndex + groupSize;
+    
+            // Разделяем задачи по модулю идентификатора инстанса
+            const filteredDistricts = districtsToUpdate.filter((district, index) => index % 2 === (instanceId - 1));
+    
+            for (const district of filteredDistricts) {
                 const { name, district_link_ostrovok } = district;
                 try {
                     const data = await this.updateDistrictCountPageAndRegion(name, district_link_ostrovok);
@@ -239,7 +258,7 @@ export class ParserService {
                 await this.delay(0); // Задержка в 0 секунд между обработкой записей
             }
 
-            console.log('Обновление 1000 записей завершено');
+            console.log(`Обновление ${filteredDistricts.length} записей завершено`);
         } catch (error) {
             console.error('Ошибка при обновлении записей:', error);
         }
