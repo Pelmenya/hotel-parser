@@ -39,6 +39,9 @@ export class Districts {
     @Column("simple-array", { nullable: true })
     image_urls?: string[];
 
+    @Column({ nullable: true })
+    pages_loaded: boolean;
+
     @CreateDateColumn({ type: 'timestamp' }) // Автоматическое заполнение даты создания
     created_at: Date;
 

@@ -73,12 +73,86 @@ export class ParserService {
         }
     }
 
-    async parseHotelsByPage(page: number) {
+    async parseHotelsByPage(page: number, district: string = '') {
         const data = await this.parsePage(`?page=${page}`);
         if (data.error) {
             console.error(`Failed to fetch data for page ${page}:`, data.message);
         }
         await this.filesService.saveDataToJsonFile(data, `page_${page}.json`, 'pages');
+        return data;
+    }
+
+    async processAllDistricts() {
+        try {
+            const instanceId = this.instanceId;
+            const totalInstances = this.totalInstances;
+            const districts = await this.districtsRepository.findAll();
+
+            // Фильтруем районы, у которых есть страницы для загрузки и которые еще не были загружены
+            const districtsToProcess = districts.filter(d => d.count_pages > 0 && !d.pages_loaded);
+
+            // Определяем размер группы
+            const groupSize = Math.ceil(districtsToProcess.length / totalInstances);
+
+            // Вычисляем начальный и конечный индекс для текущего инстанса
+            const startIndex = (instanceId - 1) * groupSize;
+            const endIndex = Math.min(startIndex + groupSize, districtsToProcess.length);
+
+            // Получаем массив районов для текущего инстанса
+            const filteredDistricts = districtsToProcess.slice(startIndex, endIndex);
+
+            // Обрабатываем каждый район
+            for (const district of filteredDistricts) {
+                try {
+                    await this.parseDistrictPages(district.district_link_ostrovok);
+                } catch (error) {
+                    console.error(`Error processing district ${district.name}:`, error);
+                }
+                await this.delay(500); // Задержка между обработкой районов
+            }
+
+            console.log(`Processed ${filteredDistricts.length} districts.`);
+        } catch (error) {
+            console.error('Ошибка при обработке всех районов:', error);
+        }
+    }
+
+    async parseDistrictPages(districtLink: string) {
+        const districtData = await this.districtsRepository.findByLink(districtLink);
+        if (!districtData || districtData.count_pages === null) {
+            console.error(`District data not found or count_pages is null for district ${districtLink}`);
+            return;
+        }
+
+        const { count_pages, id } = districtData;
+        const instanceId = this.instanceId;
+        const totalInstances = this.totalInstances;
+
+        // Распределение страниц по инстансам
+        const groupSize = Math.ceil(count_pages / totalInstances); // Определяем размер группы страниц
+        const startPage = (instanceId - 1) * groupSize + 1;
+        const endPage = Math.min(startPage + groupSize - 1, count_pages);
+
+        for (let page = startPage; page <= endPage; page++) {
+            const data = await this.parseDistrictPage(page, districtLink);
+            if (data.error) {
+                console.error(`Failed to fetch data for district ${districtLink} page ${page}:`, data.message);
+                return; // Exit on error to prevent marking as loaded
+            }
+        }
+
+        // Обновляем поле pages_loaded только если текущий инстанс обработал все свои страницы
+        // и другие инстансы могли обработать свои страницы
+        await this.districtsRepository.updatePagesLoaded(id, true);
+        console.log(`All pages loaded for district: ${districtLink} by instance ${instanceId}`);
+    }
+
+    async parseDistrictPage(page: number, districtLink: string) {
+        const data = await this.parsePage(`/${districtLink.split('/')[3]}/?page=${page}`);
+        if (data.error) {
+            console.error(`Failed to fetch data for page ${page} of district ${districtLink}:`, data.message);
+        }
+        await this.filesService.saveDataToJsonFile(data, `page_${page}.json`, `pages/districts/${districtLink.split('/')[3]}`);
         return data;
     }
 
@@ -177,73 +251,72 @@ export class ParserService {
     async updateDistrictCountPageAndRegion(name: string, link: string) {
         const data = await this.parsePage('/' + link.split('/')[3]);
         const $ = cheerio.load(data);
-    
+
         let resCountPage = null;
-    
+
         const count = Number($($('.Pagination_item__lBv39').last()).text().trim());
         const countTwo = Number($($('.zen-pagination-item-value').last()).text().trim());
-    
+
         if (count > 0) {
             resCountPage = count;
         } else if (countTwo > 0) {
             resCountPage = countTwo;
         }
-    
+
         const headOne = $('.SearchInfo_region__D0BK1');
         const headTwo = $('.zen-regioninfo-region');
-    
+
         const countHotels = $('.heading-summary-hotels').text().trim();
         const countHotelsTwo = $('.ResultBanner_header__GiOTH').text().trim();
-    
+
         const extractNumber = (text: string) => {
             const match = text.match(/\d+/);
             return match ? parseInt(match[0], 10) : null;
         };
-    
+
         const countHotelsNumber = extractNumber(countHotels) || extractNumber(countHotelsTwo) || 0;
-    
+
         // Устанавливаем количество страниц в 1, если есть гостиницы и количество страниц не определено
         if (countHotelsNumber > 0 && resCountPage === null) {
             resCountPage = '1';
         } else if (!resCountPage) {
             resCountPage = '0';
         }
-    
+
         return {
             count_pages: resCountPage,
             region: headOne.text().trim() || headTwo.text().trim() || null,
             count_hotels: countHotelsNumber
         };
     }
-        
+
     async updateDistrictCounts() {
         try {
             const instanceId = this.instanceId; // Получаем идентификатор инстанса
             const totalInstances = this.totalInstances; // Получаем общее количество инстансов
             const districts = await this.districtsRepository.findAll();
-    
+
             // Сортируем районы по ID (UUID) в лексикографическом порядке
             districts.sort((a, b) => a.id.localeCompare(b.id));
-    
+
             const districtsToUpdate = districts.filter(d => d.count_pages === null);
-    
+
             // Определяем размер группы
             const groupSize = Math.ceil(districtsToUpdate.length / totalInstances);
-    
+
             // Вычисляем начальный и конечный индекс для текущего инстанса
             const startIndex = (instanceId - 1) * groupSize;
-            const endIndex = startIndex + groupSize;
-    
-            // Разделяем задачи по модулю идентификатора инстанса
-            const filteredDistricts = districtsToUpdate.filter((district, index) => index % 2 === (instanceId - 1));
-    
+            const endIndex = Math.min(startIndex + groupSize, districtsToUpdate.length);
+
+            // Выбираем задачи для текущего инстанса
+            const filteredDistricts = districtsToUpdate.slice(startIndex, endIndex);
+
             for (const district of filteredDistricts) {
                 const { name, district_link_ostrovok } = district;
                 try {
                     const data = await this.updateDistrictCountPageAndRegion(name, district_link_ostrovok);
                     const count_pages = parseInt(data.count_pages, 10);
                     const { region, count_hotels } = data;
-
 
                     if (!isNaN(count_pages)) {
                         await this.districtsRepository.updateCountPages(district.id, count_pages, region, count_hotels);

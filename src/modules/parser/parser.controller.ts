@@ -45,6 +45,12 @@ export class ParserController {
     return await this.parseService.getDistrictsFromPages();
   }
 
+  @Post('district-pages')
+  @HttpCode(200)
+  async getDistrictsPages(@Query() params: { districtLink: string }): Promise<any> {
+    return await this.parseService.parseDistrictPages(params.districtLink);
+  }
+
   @Put('districts-count-page')
   @HttpCode(200)
   async updateDistrictCountPage(): Promise<any> {
