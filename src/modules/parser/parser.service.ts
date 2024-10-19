@@ -91,18 +91,8 @@ export class ParserService {
             // Фильтруем районы, у которых есть страницы для загрузки и которые еще не были загружены
             const districtsToProcess = districts.filter(d => d.count_pages > 0 && !d.pages_loaded);
 
-            // Определяем размер группы
-            const groupSize = Math.ceil(districtsToProcess.length / totalInstances);
-
-            // Вычисляем начальный и конечный индекс для текущего инстанса
-            const startIndex = (instanceId - 1) * groupSize;
-            const endIndex = Math.min(startIndex + groupSize, districtsToProcess.length);
-
-            // Получаем массив районов для текущего инстанса
-            const filteredDistricts = districtsToProcess.slice(startIndex, endIndex);
-
             // Обрабатываем каждый район
-            for (const district of filteredDistricts) {
+            for (const district of districtsToProcess) {
                 try {
                     await this.parseDistrictPages(district.district_link_ostrovok);
                 } catch (error) {
@@ -111,7 +101,7 @@ export class ParserService {
                 await this.delay(500); // Задержка между обработкой районов
             }
 
-            console.log(`Processed ${filteredDistricts.length} districts.`);
+            console.log(`Processed ${districtsToProcess.length} districts.`);
         } catch (error) {
             console.error('Ошибка при обработке всех районов:', error);
         }
@@ -119,9 +109,9 @@ export class ParserService {
 
     async parseDistrictPages(districtLink: string) {
         const districtData = await this.districtsRepository.findByLink(districtLink);
-        if (!districtData || districtData.count_pages === null) {
-            console.error(`District data not found or count_pages is null for district ${districtLink}`);
-            return;
+        if (!districtData || districtData.count_pages === null || districtData.count_pages === 0) {
+            console.error(`District data not found or count_pages is null or 0 pages for district ${districtLink}`);
+            return `District data not found or count_pages is null or 0 pages for district ${districtLink}`;
         }
 
         const { count_pages, id } = districtData;
@@ -179,8 +169,8 @@ export class ParserService {
         });
     }
 
-    async readDataPageRussianHotelsFromJson(page: number) {
-        return this.filesService.readDataFromJsonFile(`page_${page}.json`, 'pages');
+    async readDataPageRussianHotelsFromJson(district: string = '', page: number) {
+        return this.filesService.readDataFromJsonFile(`page_${page}.json`, `pages${district ? '/districts/' + district : ''}`);
     }
 
     async loadFullPageWithLocalProxy(url: string) {
@@ -207,7 +197,7 @@ export class ParserService {
 
         const parseAndStoreDistrictsFromPage = async (page: number) => {
             try {
-                const data = await this.readDataPageRussianHotelsFromJson(page);
+                const data = await this.readDataPageRussianHotelsFromJson('', page);
                 const $ = cheerio.load(data);
 
                 const pagePromises = $('.item__title').map(async (index, element) => {
@@ -344,7 +334,7 @@ export class ParserService {
 
         const parseAndStoreHotelsFromPage = async (page: number) => {
             try {
-                const data = await this.readDataPageRussianHotelsFromJson(page);
+                const data = await this.readDataPageRussianHotelsFromJson('',page);
                 const $ = cheerio.load(data);
 
                 const pagePromises = $('.hotel-wrapper').map(async (index, element) => {

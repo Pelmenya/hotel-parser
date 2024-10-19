@@ -24,8 +24,8 @@ export class ParserController {
 
   // читает данные страницы отелей из созданного json файла при парсинге, для дальнейшей обработки или просмотра
   @Get('russian-hotel')
-  async getRussianHotel(@Query() params: { page: number }): Promise<{ success: boolean }> {
-    return await this.parseService.readDataPageRussianHotelsFromJson(params.page);
+  async getRussianHotel(@Query() params: { district: string; page: number }): Promise<{ success: boolean }> {
+    return await this.parseService.readDataPageRussianHotelsFromJson(params.district, params.page );
   }
 
   @Get('page-svg')
@@ -49,6 +49,12 @@ export class ParserController {
   @HttpCode(200)
   async getDistrictsPages(@Query() params: { districtLink: string }): Promise<any> {
     return await this.parseService.parseDistrictPages(params.districtLink);
+  }
+
+  @Post('district-pages-all')
+  @HttpCode(200)
+  async getDistrictsPagesAll(): Promise<any> {
+    return await this.parseService.processAllDistricts();
   }
 
   @Put('districts-count-page')
