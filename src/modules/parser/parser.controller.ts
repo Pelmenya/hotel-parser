@@ -28,11 +28,6 @@ export class ParserController {
     return await this.parseService.readDataPageRussianHotelsFromJson(params.district, params.page );
   }
 
-  @Get('page-svg')
-  async getSvg(@Query() params: { page: number }): Promise<{ success: boolean }> {
-    return await this.parseService.extractSvgIconsFromCss(params.page);
-  }
-
   @Post('hotels-from-pages')
   @HttpCode(200)
   async getHotelsFromPages(): Promise<any> {

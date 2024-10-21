@@ -98,7 +98,7 @@ export class ParserService {
                 } catch (error) {
                     console.error(`Error processing district ${district.name}:`, error);
                 }
-                await this.delay(500); // Задержка между обработкой районов
+                await this.delay(0); // Задержка между обработкой районов
             }
 
             console.log(`Processed ${districtsToProcess.length} districts.`);
@@ -387,27 +387,6 @@ export class ParserService {
         return hotels;
     }
 
-    async extractSvgIconsFromCss(page: number): Promise<any> {
-        try {
-            const data = await this.filesService.readDataFromJsonFile(`page_${page}.json`, 'pages');
-            const $ = cheerio.load(data);
-            const styleTags = $('style');
-
-            styleTags.each((index, element) => {
-                const cssContent = $(element).html();
-                const svgIcons = this.extractBase64Svgs(cssContent);
-
-                svgIcons.forEach((svg, idx) => {
-                    const filePath = `icon_${index}_${idx}.svg`;
-                    this.filesService.saveDataToFile(svg, filePath, 'icons');
-                    console.log(`SVG icon saved to ${filePath}`);
-                });
-            });
-            return Promise.resolve({ success: true });
-        } catch (error) {
-            console.error('Error extracting SVG icons:', error);
-        }
-    }
 
     async parseCountries() {
         try {
