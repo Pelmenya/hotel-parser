@@ -21,7 +21,7 @@ export class ParserService {
         private readonly configService: ConfigService,
         private readonly filesService: FilesService,
         private readonly countriesRepository: CountriesRepository,
-        private readonly hotelsRepository: HotelsRepository,
+        //private readonly hotelsRepository: HotelsRepository,
         private readonly districtsRepository: DistrictsRepository,
     ) {
         const proxyHost = this.configService.get('PROXY_HOST');
@@ -53,8 +53,9 @@ export class ParserService {
         });
     }
 
+
     async parsePage(params: any = '', type: TParserLoadContent = 'axios', retries: number = 3) {
-        console.log(params);
+        console.log('Parse page from url: ', params);
         const url = this.configService.get('BASE_PARSE_URL') + params;
 
         for (let attempt = 1; attempt <= retries; attempt++) {
@@ -169,9 +170,6 @@ export class ParserService {
         });
     }
 
-    async readDataPageRussianHotelsFromJson(district: string = '', page: number) {
-        return this.filesService.readDataFromJsonFile(`page_${page}.json`, `pages${district ? '/districts/' + district : ''}`);
-    }
 
     async loadFullPageWithLocalProxy(url: string) {
         const browser = await puppeteer.launch({
@@ -197,7 +195,7 @@ export class ParserService {
 
         const parseAndStoreDistrictsFromPage = async (page: number) => {
             try {
-                const data = await this.readDataPageRussianHotelsFromJson('', page);
+                const data = await this.filesService.readDataPageRussianHotelsFromJson('', page);
                 const $ = cheerio.load(data);
 
                 const pagePromises = $('.item__title').map(async (index, element) => {
@@ -326,67 +324,6 @@ export class ParserService {
             console.error('Ошибка при обновлении записей:', error);
         }
     }
-
-    async getHotelsFromPages() {
-        const totalPages = 391;
-        const batchSize = 10; // Количество страниц для обработки за раз
-        const hotels: any[] = [];
-
-        const parseAndStoreHotelsFromPage = async (page: number) => {
-            try {
-                const data = await this.readDataPageRussianHotelsFromJson('',page);
-                const $ = cheerio.load(data);
-
-                const pagePromises = $('.hotel-wrapper').map(async (index, element) => {
-                    const hotel_link_ostrovok = $(element).find('.zenmobilegallery-photo-container').attr('href') || '';
-                    const name = $(element).find('.zen-hotelcard-name-link').text()?.trim() || '';
-                    const address = $(element).find('.zen-hotelcard-address').text()?.trim() || '';
-                    const location_value = $(element).find('.zen-hotelcard-location-value').text()?.trim() || '';
-                    const location_from = $(element).find('.zen-hotelcard-distance').text()?.trim().split('\n')[1]?.trim() || '';
-                    const location_name = $(element).find('.zen-hotelcard-location-name').text()?.trim() || '';
-                    const prev_image_urls = $(element).find('.zenimage-content').attr('src') || '';
-                    const stars = $(element).find('.zen-ui-stars').children('.zen-ui-stars-wrapper').length;
-
-                    const hotelData = {
-                        name,
-                        address,
-                        location_value,
-                        location_from,
-                        location_name,
-                        hotel_link_ostrovok,
-                        prev_image_urls: [prev_image_urls],
-                        stars,
-                    };
-
-                    const existingHotel = await this.hotelsRepository.findByNameAndAddress(name, address);
-
-                    if (!existingHotel) {
-                        await this.hotelsRepository.create(hotelData);
-                        hotels.push(hotelData);
-                    } else {
-                        console.log(`Hotel already exists: ${name}, ${address}`);
-                    }
-                }).get();
-
-                await Promise.all(pagePromises);
-            } catch (error) {
-                console.error(`Ошибка при обработке страницы ${page}:`, error);
-            }
-        };
-
-        for (let i = 0; i < totalPages; i += batchSize) {
-            const batchPromises = [];
-            for (let j = 0; j < batchSize && i + j < totalPages; j++) {
-                batchPromises.push(parseAndStoreHotelsFromPage(i + j + 1));
-            }
-            await Promise.all(batchPromises);
-            console.log(`Processed batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(totalPages / batchSize)}`);
-        }
-
-        console.log('Обработка всех страниц завершена');
-        return hotels;
-    }
-
 
     async parseCountries() {
         try {

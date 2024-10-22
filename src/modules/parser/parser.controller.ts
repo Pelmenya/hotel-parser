@@ -5,6 +5,7 @@ import { ParserService } from './parser.service';
 export class ParserController {
   constructor(private readonly parseService: ParserService) { }
 
+  //Для получения html страницы запросом get
   @Get('page')
   async getPage(@Query() params: { page: number }): Promise<string> {
     return await this.parseService.parsePage({ page: params.page });
@@ -20,18 +21,6 @@ export class ParserController {
   @HttpCode(200)
   async getRussianHotels(@Query() params: { start: number; end: number }): Promise<{ success: boolean }> {
     return await this.parseService.parseRussianHotels(params.start, params.end);
-  }
-
-  // читает данные страницы отелей из созданного json файла при парсинге, для дальнейшей обработки или просмотра
-  @Get('russian-hotel')
-  async getRussianHotel(@Query() params: { district: string; page: number }): Promise<{ success: boolean }> {
-    return await this.parseService.readDataPageRussianHotelsFromJson(params.district, params.page );
-  }
-
-  @Post('hotels-from-pages')
-  @HttpCode(200)
-  async getHotelsFromPages(): Promise<any> {
-    return await this.parseService.getHotelsFromPages();
   }
 
   @Post('districts')

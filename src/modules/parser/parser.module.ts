@@ -8,8 +8,9 @@ import { HotelsModule } from '../hotels/hotels.module';
 import { DistrictsModule } from '../districts/districts.module';
 
 @Module({
-  imports: [ConfigModule, CountryModule, HotelsModule, DistrictsModule, FilesModule],
+  imports: [ConfigModule, CountryModule, DistrictsModule, FilesModule],
   controllers: [ParserController],
-  providers: [ParserService]
+  providers: [ParserService],
+  exports: [ParserService]
 })
 export class ParserModule { }

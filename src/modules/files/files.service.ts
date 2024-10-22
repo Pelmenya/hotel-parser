@@ -108,4 +108,7 @@ export class FilesService {
     }
   }
 
+  async readDataPageRussianHotelsFromJson(district: string = '', page: number) {
+    return this.readDataFromJsonFile(`page_${page}.json`, `pages${district ? '/districts/' + district : ''}`);
+  }
 }

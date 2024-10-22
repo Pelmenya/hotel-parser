@@ -8,6 +8,9 @@ import { CountryModule } from './modules/countries/countries.module';
 import { HotelsModule } from './modules/hotels/hotels.module';
 import { FilesModule } from './modules/files/files.module';
 import { DistrictsModule } from './modules/districts/districts.module';
+import { CheerioModule } from './modules/cheerio/cheerio.module';
+import { PuppeteerModule } from './modules/puppeteer/puppeteer.module';
+import { TransportModule } from './modules/transport/transport.module';
 
 @Module({
   imports: [
@@ -20,6 +23,9 @@ import { DistrictsModule } from './modules/districts/districts.module';
     HotelsModule,
     FilesModule,
     DistrictsModule,
+    CheerioModule,
+    PuppeteerModule,
+    TransportModule,
   ],
   controllers: [AppController],
   providers: [AppService],
