@@ -87,7 +87,7 @@ export class DistrictsService {
                 } catch (error) {
                     console.error(`Error processing district ${district.name}:`, error);
                 }
-                //                await this.delay(0); // Задержка между обработкой районов
+                await delay(0); // Задержка между обработкой районов
             }
 
             console.log(`Processed ${districtsToProcess.length} districts.`);
@@ -135,7 +135,7 @@ export class DistrictsService {
         return data;
     }
 
-    async updateDistrictCountPageAndRegion(name: string, link: string) {
+    async updateDistrictCountPageAndRegion(link: string) {
         const data = await this.parserService.parsePage('/' + link.split('/')[3]);
         const $ = cheerio.load(data);
 
@@ -177,7 +177,7 @@ export class DistrictsService {
         };
     }
 
-    async updateDistrictCounts() {
+    async updateDistrictsCountPages() {
         try {
             const instanceId = this.instanceId; // Получаем идентификатор инстанса
             const totalInstances = this.totalInstances; // Получаем общее количество инстансов
@@ -201,7 +201,7 @@ export class DistrictsService {
             for (const district of filteredDistricts) {
                 const { name, district_link_ostrovok } = district;
                 try {
-                    const data = await this.updateDistrictCountPageAndRegion(name, district_link_ostrovok);
+                    const data = await this.updateDistrictCountPageAndRegion(district_link_ostrovok);
                     const count_pages = parseInt(data.count_pages, 10);
                     const { region, count_hotels } = data;
 
@@ -214,9 +214,8 @@ export class DistrictsService {
                 } catch (error) {
                     console.error(`Error updating district "${name}":`, error);
                 }
-                //              await this.delay(0); // Задержка между обработкой районов
+                await delay(0); // Задержка между обработкой районов
             }
-
             console.log(`Обновление ${filteredDistricts.length} записей завершено`);
         } catch (error) {
             console.error('Ошибка при обновлении записей:', error);

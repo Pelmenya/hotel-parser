@@ -1,7 +1,10 @@
 import { Module } from '@nestjs/common';
 import { TransportService } from './transport.service';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
-  providers: [TransportService]
+  imports: [ConfigModule],
+  providers: [TransportService],
+  exports: [TransportService],
 })
 export class TransportModule {}

@@ -7,7 +7,7 @@ export class DistrictsController {
         private readonly districtsService: DistrictsService,
     ) { }
 
-    // запускает создание облачтей или регионов из страниц в папке pages, формат страницы : page_111.json
+    // запускает создание облаcтей или регионов из страниц в папке pages, формат страницы : page_111.json
     @Post('from-pages')
     @HttpCode(200)
     async createDistrictsFromPages(): Promise<any> {
@@ -28,7 +28,7 @@ export class DistrictsController {
   
     @Put('count-page')
     @HttpCode(200)
-    async updateDistrictCountPage(): Promise<any> {
-      return await this.districtsService.updateDistrictCounts();
+    async updateDistrictsCountPages(): Promise<any> {
+      return await this.districtsService.updateDistrictsCountPages();
     }
 }

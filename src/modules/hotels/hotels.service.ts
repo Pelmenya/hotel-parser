@@ -79,5 +79,37 @@ export class HotelsService {
     async getRussianHotelsByPageAndDistrict(district: string, page: number) {
         return await this.filesService.readDataPageRussianHotelsFromJson(district, page);
     }
+
+    async parseHotelsByPage(page: number, district: string = '') {
+        const data = await this.parserService.parsePage(`?page=${page}`);
+        if (data.error) {
+            console.error(`Failed to fetch data for page ${page}:`, data.message);
+        }
+        await this.filesService.saveDataToJsonFile(data, `page_${page}.json`, 'pages');
+        return data;
+    }
+
+    async parseRussianHotels(start: number, end: number) {
+        const promises = [];
+        for (let i = start; i <= end; i++) {
+            promises.push(this.delayedParseHotelsByPage(i, (i - start + 1) * 4000));
+        }
+        await Promise.all(promises);
+        return { success: true };
+    }
+
+    delayedParseHotelsByPage(page: number, delay: number) {
+        return new Promise((resolve, reject) => {
+            setTimeout(async () => {
+                try {
+                    const data = await this.parseHotelsByPage(page);
+                    resolve(data);
+                } catch (error) {
+                    console.error('Ошибка при парсинге отелей на странице', page, ':', error);
+                    reject(error);
+                }
+            }, delay);
+        });
+    }
     
 }
