@@ -4,13 +4,23 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Districts } from './districts.entity';
 import { DistrictsController } from './districts.controller';
 import { ParserModule } from '../parser/parser.module';
+import { DistrictsService } from './districts.service';
+import { FilesModule } from '../files/files.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Districts]),
+    FilesModule,
+    ParserModule,
   ],
-  providers: [DistrictsRepository],
-  exports:[DistrictsRepository],
+  providers: [
+    DistrictsRepository, 
+    DistrictsService
+  ],
+  exports:[
+    DistrictsRepository, 
+    DistrictsService
+  ],
   controllers: [DistrictsController],
 })
 export class DistrictsModule {}

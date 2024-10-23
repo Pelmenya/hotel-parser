@@ -11,8 +11,8 @@ export class HotelsController {
     // запускает создание отелей из страниц в папке pages, формат страницы ex. page_111.json
     @Post('from-pages')
     @HttpCode(200)
-    async getHotelsFromPages(): Promise<any> {
-        return await this.hotelsService.getHotelsFromPages();
+    async createHotelsFromPages(): Promise<any> {
+        return await this.hotelsService.createHotelsFromPages();
     }
 
     // читает данные страницы отелей из созданного json файла при парсинге, для дальнейшей обработки или просмотра

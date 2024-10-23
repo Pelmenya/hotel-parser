@@ -16,7 +16,7 @@ export class HotelsService {
         private readonly filesService: FilesService,
     ) {}
     
-    async getHotelsFromPages() {
+    async createHotelsFromPages() {
         const totalPages = 391; // Кол-во страниц с отелями на main страницы Гостиницы России
         const batchSize = 10; // Количество страниц для обработки за раз
         const hotels: any[] = [];
