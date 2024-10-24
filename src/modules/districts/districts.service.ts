@@ -6,7 +6,6 @@ import * as cheerio from 'cheerio';
 import { ParserService } from '../parser/parser.service';
 import { ConfigService } from '@nestjs/config';
 
-
 @Injectable()
 export class DistrictsService {
     private instanceId: 1;
@@ -25,7 +24,7 @@ export class DistrictsService {
 
     async createDistrictsFromPages() {
         const totalPages = 774;
-        const batchSize = 10; // Количество страниц для обработки за раз
+        const batchSize = 10;
         const districts: any[] = [];
 
         const parseAndStoreDistrictsFromPage = async (page: number) => {
@@ -54,7 +53,7 @@ export class DistrictsService {
 
                 await Promise.all(pagePromises);
             } catch (error) {
-                console.error(`Ошибка при обработке страницы ${page}:`, error);
+                console.error(`Error processing page ${page}:`, error);
             }
         };
 
@@ -67,7 +66,7 @@ export class DistrictsService {
             console.log(`Processed batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(totalPages / batchSize)}`);
         }
 
-        console.log('Обработка всех страниц завершена');
+        console.log('All pages processing completed');
         return districts;
     }
 
@@ -77,59 +76,76 @@ export class DistrictsService {
             const totalInstances = this.totalInstances;
             const districts = await this.districtsRepository.findAll();
 
-            // Фильтруем районы, у которых есть страницы для загрузки и которые еще не были загружены
-            const districtsToProcess = districts.filter(d => d.count_pages > 0 && !d.pages_loaded);
+            const districtsToProcess = districts.filter(d => d.count_pages > 0 && !d.all_pages_loaded);
 
-            // Обрабатываем каждый район
             for (const district of districtsToProcess) {
                 try {
                     await this.createDistrictPages(district.district_link_ostrovok);
                 } catch (error) {
                     console.error(`Error processing district ${district.name}:`, error);
                 }
-                await delay(0); // Задержка между обработкой районов
             }
 
             console.log(`Processed ${districtsToProcess.length} districts.`);
         } catch (error) {
-            console.error('Ошибка при обработке всех районов:', error);
+            console.error('Error processing all districts:', error);
         }
     }
 
     async createDistrictPages(districtLink: string) {
         const districtData = await this.districtsRepository.findByLink(districtLink);
-        if (!districtData || districtData.count_pages === null || districtData.count_pages === 0) {
-            console.error(`District data not found or count_pages is null or 0 pages for district ${districtLink}`);
-            return `District data not found or count_pages is null or 0 pages for district ${districtLink}`;
+    
+        if (!districtData || districtData.count_pages <= 0) {
+            console.error(`No data for district ${districtLink}`);
+            return;
         }
-
-        const { count_pages, id } = districtData;
-        const instanceId = this.instanceId;
-        const totalInstances = this.totalInstances;
-
-        // Распределение страниц по инстансам
-        const groupSize = Math.ceil(count_pages / totalInstances); // Определяем размер группы страниц
-        const startPage = (instanceId - 1) * groupSize + 1;
-        const endPage = Math.min(startPage + groupSize - 1, count_pages);
-
-        for (let page = startPage; page <= endPage; page++) {
-            const data = await this.parseDistrictPage(page, districtLink);
-            if (data.error) {
-                console.error(`Failed to fetch data for district ${districtLink} page ${page}:`, data.message);
-                return; // Exit on error to prevent marking as loaded
+    
+        const { count_pages, id, processed_pages = [] } = districtData;
+    
+        const processedPagesNumeric = processed_pages.map(Number);
+    
+        const pagesToProcess = Array.from({ length: count_pages }, (_, i) => i + 1)
+            .filter(page => 
+                (page - 1) % this.totalInstances === this.instanceId - 1 && 
+                !processedPagesNumeric.includes(page)
+            );
+    
+        if (pagesToProcess.length === 0) {
+            console.log(`All pages for district ${districtLink} are already processed.`);
+            return;
+        }
+    
+        const newProcessedPages = [...processedPagesNumeric];
+    
+        for (const page of pagesToProcess) {
+            try {
+                const data = await this.parseDistrictPage(page, districtLink);
+                if (data.error) {
+                    console.error(`Error processing page ${page} of district ${districtLink}:`, data.message);
+                    continue;
+                }
+    
+                newProcessedPages.push(page);
+    
+                if (newProcessedPages.length !== processedPagesNumeric.length) {
+                    await this.districtsRepository.updateProcessedPages(id, newProcessedPages);
+                }
+    
+                if (newProcessedPages.length === count_pages) {
+                    await this.districtsRepository.updateAllPagesLoaded(id, true);
+                    console.log(`All pages for district ${districtLink} are processed and loaded.`);
+                    break;
+                }
+            } catch (error) {
+                console.error(`Error processing page ${page} of district ${districtLink}:`, error);
             }
         }
-
-        // Обновляем поле pages_loaded только если текущий инстанс обработал все свои страницы
-        // и другие инстансы могли обработать свои страницы
-        await this.districtsRepository.updatePagesLoaded(id, true);
-        console.log(`All pages loaded for district: ${districtLink} by instance ${instanceId}`);
     }
-
+        
     async parseDistrictPage(page: number, districtLink: string) {
         const data = await this.parserService.parsePage(`/${districtLink.split('/')[3]}/?page=${page}`);
         if (data.error) {
-            console.error(`Failed to fetch data for page ${page} of district ${districtLink}:`, data.message);
+            console.error(`Failed to get data for page ${page} of district ${districtLink}:`, data.message);
         }
         await this.filesService.saveDataToJsonFile(data, `page_${page}.json`, `pages/districts/${districtLink.split('/')[3]}`);
         return data;
@@ -163,7 +179,6 @@ export class DistrictsService {
 
         const countHotelsNumber = extractNumber(countHotels) || extractNumber(countHotelsTwo) || 0;
 
-        // Устанавливаем количество страниц в 1, если есть гостиницы и количество страниц не определено
         if (countHotelsNumber > 0 && resCountPage === null) {
             resCountPage = '1';
         } else if (!resCountPage) {
@@ -179,23 +194,19 @@ export class DistrictsService {
 
     async updateDistrictsCountPages() {
         try {
-            const instanceId = this.instanceId; // Получаем идентификатор инстанса
-            const totalInstances = this.totalInstances; // Получаем общее количество инстансов
+            const instanceId = this.instanceId;
+            const totalInstances = this.totalInstances;
             const districts = await this.districtsRepository.findAll();
 
-            // Сортируем районы по ID (UUID) в лексикографическом порядке
             districts.sort((a, b) => a.id.localeCompare(b.id));
 
             const districtsToUpdate = districts.filter(d => d.count_pages === null);
 
-            // Определяем размер группы
             const groupSize = Math.ceil(districtsToUpdate.length / totalInstances);
 
-            // Вычисляем начальный и конечный индекс для текущего инстанса
             const startIndex = (instanceId - 1) * groupSize;
             const endIndex = Math.min(startIndex + groupSize, districtsToUpdate.length);
 
-            // Выбираем задачи для текущего инстанса
             const filteredDistricts = districtsToUpdate.slice(startIndex, endIndex);
 
             for (const district of filteredDistricts) {
@@ -214,12 +225,10 @@ export class DistrictsService {
                 } catch (error) {
                     console.error(`Error updating district "${name}":`, error);
                 }
-                await delay(0); // Задержка между обработкой районов
             }
-            console.log(`Обновление ${filteredDistricts.length} записей завершено`);
+            console.log(`Update of ${filteredDistricts.length} records completed`);
         } catch (error) {
-            console.error('Ошибка при обновлении записей:', error);
+            console.error('Error updating records:', error);
         }
     }
-
 }

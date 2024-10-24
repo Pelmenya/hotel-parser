@@ -8,7 +8,7 @@ export class DistrictsRepository {
     constructor(
         @InjectRepository(Districts)
         private districtsRepository: Repository<Districts>,
-    ) { }
+    ) {}
 
     async findAll(): Promise<Districts[]> {
         return await this.districtsRepository.find();
@@ -35,13 +35,17 @@ export class DistrictsRepository {
         await this.districtsRepository.update(id, { count_pages, region, count_hotels });
     }
 
-    // Новый метод для обновления поля pages_loaded
-    async updatePagesLoaded(id: string, pages_loaded: boolean): Promise<void> {
-        await this.districtsRepository.update(id, { pages_loaded });
-    }
-
-    // Новый метод для поиска района по district_link_ostrovok
     async findByLink(district_link_ostrovok: string): Promise<Districts | undefined> {
         return this.districtsRepository.findOne({ where: { district_link_ostrovok } });
+    }
+
+    // Новый метод для обновления обработанных страниц
+    async updateProcessedPages(id: string, processed_pages: number[]): Promise<void> {
+        await this.districtsRepository.update(id, { processed_pages });
+    }
+
+    // Новый метод для обновления статуса, что все страницы загружены
+    async updateAllPagesLoaded(id: string, all_pages_loaded: boolean): Promise<void> {
+        await this.districtsRepository.update(id, { all_pages_loaded });
     }
 }

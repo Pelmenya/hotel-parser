@@ -24,7 +24,6 @@ export class ParserService {
                 if (attempt === retries) {
                     return { error: `Failed after ${retries} attempts`, message: error.message };
                 }
-                await delay(2000); // задержка между попытками
             }
         }
     }
