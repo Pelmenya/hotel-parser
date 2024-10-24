@@ -72,8 +72,6 @@ export class DistrictsService {
 
     async processAllDistricts() {
         try {
-            const instanceId = this.instanceId;
-            const totalInstances = this.totalInstances;
             const districts = await this.districtsRepository.findAll();
 
             const districtsToProcess = districts.filter(d => d.count_pages > 0 && !d.all_pages_loaded);
