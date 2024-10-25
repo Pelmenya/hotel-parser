@@ -3,6 +3,10 @@ import { ConfigService } from '@nestjs/config';
 import { ParserService } from '../parser/parser.service';
 import { HotelsRepository } from './hotels.repository';
 import { FilesService } from '../files/files.service';
+import { DistrictsRepository } from '../districts/districts.repository';
+import { Districts } from '../districts/districts.entity';
+import { Hotels } from './hotels.entity';
+
 
 import * as cheerio from 'cheerio';
 
@@ -10,106 +14,80 @@ import * as cheerio from 'cheerio';
 @Injectable()
 export class HotelsService {
     constructor(
-        private readonly configService: ConfigService,
-        private readonly parserService: ParserService,
         private readonly hotelsRepository: HotelsRepository,
+        private readonly districtsRepository: DistrictsRepository,
         private readonly filesService: FilesService,
-    ) {}
-    
-    async createHotelsFromPages() {
-        const totalPages = 391; // Кол-во страниц с отелями на main страницы Гостиницы России
-        const batchSize = 10; // Количество страниц для обработки за раз
-        const hotels: any[] = [];
+    ) { }
 
-        const extractAndStoreHotelsFromPage = async (page: number) => {
-            try {
-                const data = await this.filesService.readDataPageRussianHotelsFromJson('', page);
-                const $ = cheerio.load(data);
+    async createHotelsFromDistrictsPages(district: string) {
+        const districtData = await this.districtsRepository.findByLink('/hotel/russia/' + district + '/');
+        if (!districtData) {
+            console.error(`No district found for ${district}`);
+            return [];
+        }
 
-                const pagePromises = $('.hotel-wrapper').map(async (index, element) => {
-                    const hotel_link_ostrovok = $(element).find('.zenmobilegallery-photo-container').attr('href') || '';
-                    const name = $(element).find('.zen-hotelcard-name-link').text()?.trim() || '';
-                    const address = $(element).find('.zen-hotelcard-address').text()?.trim() || '';
-                    const location_value = $(element).find('.zen-hotelcard-location-value').text()?.trim() || '';
-                    const location_from = $(element).find('.zen-hotelcard-distance').text()?.trim().split('\n')[1]?.trim() || '';
-                    const location_name = $(element).find('.zen-hotelcard-location-name').text()?.trim() || '';
-                    const prev_image_urls = $(element).find('.zenimage-content').attr('src') || '';
-                    const stars = $(element).find('.zen-ui-stars').children('.zen-ui-stars-wrapper').length;
-
-                    const hotelData = {
-                        name,
-                        address,
-                        location_value,
-                        location_from,
-                        location_name,
-                        hotel_link_ostrovok,
-                        prev_image_urls: [prev_image_urls],
-                        stars,
-                    };
-
-                    const existingHotel = await this.hotelsRepository.findByNameAndAddress(name, address);
-
-                    if (!existingHotel) {
-                        await this.hotelsRepository.create(hotelData);
-                        hotels.push(hotelData);
-                    } else {
-                        console.log(`Hotel already exists: ${name}, ${address}`);
-                    }
-                }).get();
-
-                await Promise.all(pagePromises);
-            } catch (error) {
-                console.error(`Ошибка при обработке страницы ${page}:`, error);
-            }
-        };
+        const { count_pages: totalPages } = districtData;
+        const batchSize = 10;
+        const hotels: Partial<Hotels>[] = [];
 
         for (let i = 0; i < totalPages; i += batchSize) {
+            console.log(`Processing batch starting at page ${i + 1}`);
             const batchPromises = [];
             for (let j = 0; j < batchSize && i + j < totalPages; j++) {
-                batchPromises.push(extractAndStoreHotelsFromPage(i + j + 1));
+                batchPromises.push(this.extractAndStoreHotelsFromPage(districtData, i + j + 1, hotels));
             }
             await Promise.all(batchPromises);
             console.log(`Processed batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(totalPages / batchSize)}`);
         }
 
-        console.log('Обработка всех страниц завершена');
+        console.log('All district pages processed');
         return hotels;
+    }
+
+    private async extractAndStoreHotelsFromPage(district: Districts, page: number, hotels: Partial<Hotels>[]) {
+        try {
+            const data = await this.filesService.readDataPageRussianHotelsFromJson(district.district_link_ostrovok.split('/')[3], page);
+            const $ = cheerio.load(data);
+
+            const pagePromises = $('.HotelCard_mainInfo__pNKYU').map(async (index, element) => {
+                const hotel_link_ostrovok = $(element).find('.HotelCard_title__cpfvk').children('a').attr('href') || '';
+                const name = $(element).find('.HotelCard_title__cpfvk').attr('title').trim() || '';
+                const address = $(element).find('.HotelCard_address__AvnV2').text()?.trim() || '';
+                const locations_from = [];
+                $(element).children('.HotelCard_distances__pVfDQ').map((i, el) => {
+                    const distance_from = $(el).text();
+                    locations_from.push(distance_from);
+                });
+                const stars = $(element).find('.Stars_stars__OMmzT').children('.Stars_star__jwPss').length || 0;
+
+                const hotelData = {
+                    name,
+                    address,
+                    hotel_link_ostrovok,
+                    locations_from,
+                    stars,
+                    district, // Добавляем район к данным отеля
+                };
+
+                // Добавляем данные отеля в массив
+                hotels.push(hotelData);
+
+                // Используем метод createIfNotExists для безопасной вставки
+                const createdHotel = await this.hotelsRepository.createIfNotExists(hotelData);
+                if (createdHotel) {
+                    console.log(`Hotel created: ${createdHotel.name}, ${createdHotel.address}`);
+                } else {
+                    console.log(`Hotel already exists: ${name}, ${address}`);
+                }
+            }).get();
+
+            await Promise.all(pagePromises);
+        } catch (error) {
+            console.error(`Error processing page ${page}:`, error);
+        }
     }
 
     async getRussianHotelsByPageAndDistrict(district: string, page: number) {
         return await this.filesService.readDataPageRussianHotelsFromJson(district, page);
     }
-
-    async parseHotelsByPage(page: number, district: string = '') {
-        const data = await this.parserService.parsePage(`?page=${page}`);
-        if (data.error) {
-            console.error(`Failed to fetch data for page ${page}:`, data.message);
-        }
-        await this.filesService.saveDataToJsonFile(data, `page_${page}.json`, 'pages');
-        return data;
-    }
-
-    async parseRussianHotels(start: number, end: number) {
-        const promises = [];
-        for (let i = start; i <= end; i++) {
-            promises.push(this.delayedParseHotelsByPage(i, (i - start + 1) * 4000));
-        }
-        await Promise.all(promises);
-        return { success: true };
-    }
-
-    delayedParseHotelsByPage(page: number, delay: number) {
-        return new Promise((resolve, reject) => {
-            setTimeout(async () => {
-                try {
-                    const data = await this.parseHotelsByPage(page);
-                    resolve(data);
-                } catch (error) {
-                    console.error('Ошибка при парсинге отелей на странице', page, ':', error);
-                    reject(error);
-                }
-            }, delay);
-        });
-    }
-    
 }

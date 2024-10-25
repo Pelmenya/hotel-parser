@@ -1,7 +1,8 @@
-import { Entity, Column, PrimaryGeneratedColumn, Index, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, Index, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Districts } from '../districts/districts.entity';
 
 @Entity()
-@Index(["name", "address"], { unique: true })
+@Index(["hotel_link_ostrovok", "address"], { unique: true })
 export class Hotels {
     @PrimaryGeneratedColumn("uuid")
     id: string;
@@ -12,23 +13,21 @@ export class Hotels {
     @Column()
     address: string;
 
-    @Column({ nullable: true }) // Используем nullable для демонстрации возможности null
-    location_value?: string;
-
-    @Column({ nullable: true })
-    location_from?: string;
-
-    @Column({ nullable: true })
+    @Column({ nullable: true, unique: true })
     hotel_link_ostrovok?: string;
 
-    @Column({ nullable: true })
-    location_name?: string;
+    @Column("simple-array", { nullable: true })
+    locations_from?: string[];
 
     @Column({ type: 'int', nullable: true }) // Указываем тип для числа
     stars?: number;
 
     @Column("simple-array", { nullable: true })
     prev_image_urls?: string[];
+
+    @ManyToOne(() => Districts, (district) => district.hotels, { nullable: true })
+    @JoinColumn({ name: 'district_id' }) // Укажите явное имя столбца
+    district?: Districts;
 
     @CreateDateColumn({ type: 'timestamp' }) // Автоматическое заполнение даты создания
     created_at: Date;

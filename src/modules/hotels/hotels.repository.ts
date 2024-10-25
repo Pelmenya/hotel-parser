@@ -22,9 +22,34 @@ export class HotelsRepository {
         await this.hotelsRepository.delete(id);
     }
 
-    async create(hotel: Partial<Hotels>): Promise<Hotels> {
-        const newHotel = this.hotelsRepository.create(hotel);
-        return await this.hotelsRepository.save(newHotel);
+    // Метод для безопасного создания записи с учетом уникальности
+    async createIfNotExists(hotel: Partial<Hotels>): Promise<Hotels | null> {
+        const existingHotel = await this.hotelsRepository.findOne({
+            where: { hotel_link_ostrovok: hotel.hotel_link_ostrovok },
+        });
+
+        if (existingHotel) {
+            console.log(`Hotel already exists: ${hotel.name}, ${hotel.address}`);
+            return null; // Возвращаем null, если отель уже существует
+        }
+
+        // Вставляем отель с использованием ON CONFLICT DO NOTHING
+        const query = `
+            INSERT INTO hotels (name, address, hotel_link_ostrovok, locations_from, stars, district_id)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            ON CONFLICT (hotel_link_ostrovok) DO NOTHING
+            RETURNING *;
+        `;
+        const result = await this.hotelsRepository.query(query, [
+            hotel.name,
+            hotel.address,
+            hotel.hotel_link_ostrovok,
+            hotel.locations_from,
+            hotel.stars,
+            hotel.district.id, // Указываем id района
+        ]);
+
+        return result[0] || null; // Возвращаем созданный отель или null, если вставка не произошла
     }
 
     async findByNameAndAddress(name: string, address: string): Promise<Hotels | undefined> {

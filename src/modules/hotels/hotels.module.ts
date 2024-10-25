@@ -6,12 +6,14 @@ import { HotelsController } from './hotels.controller';
 import { ParserModule } from '../parser/parser.module';
 import { HotelsService } from './hotels.service';
 import { FilesModule } from '../files/files.module';
+import { DistrictsModule } from '../districts/districts.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Hotels]),
     FilesModule,
     ParserModule,
+    DistrictsModule,
   ],
   providers: [
     HotelsRepository, 
