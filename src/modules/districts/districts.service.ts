@@ -69,14 +69,14 @@ export class DistrictsService {
         return districts;
     }
 
-    async processAllDistricts() {
+    async processSaveAllDistricts() {
         try {
             const districts = await this.districtsRepository.findAll();
             const districtsToProcess = districts.filter(d => d.count_pages > 0 && d.all_pages_loaded);
 
             for (const district of districtsToProcess) {
                 try {
-                    await this.createDistrictPages(district.district_link_ostrovok);
+                    await this.saveDistrictPages(district.district_link_ostrovok);
                 } catch (error) {
                     this.logger.error(`Error processing district ${district.name}:`, error);
                 }
@@ -88,7 +88,7 @@ export class DistrictsService {
         }
     }
 
-    async createDistrictPages(districtLink: string) {
+    async saveDistrictPages(districtLink: string) {
         const districtData = await this.districtsRepository.findByLink(districtLink);
     
         if (!districtData || districtData.count_pages <= 0) {
@@ -112,7 +112,7 @@ export class DistrictsService {
 
         for (const page of pagesToProcess) {
             try {
-                const data = await this.parseDistrictPage(page, districtLink);
+                const data = await this.saveDistrictPage(page, districtLink);
                 if (data.error) {
                     this.logger.error(`Error processing page ${page} of district ${districtLink}:`, data.message);
                     continue;
@@ -133,7 +133,7 @@ export class DistrictsService {
         }
     }
         
-    async parseDistrictPage(page: number, districtLink: string) {
+    async saveDistrictPage(page: number, districtLink: string) {
         const data = await this.parserService.parsePage(`/${districtLink.split('/')[3]}/?page=${page}`);
         if (data.error) {
             this.logger.error(`Failed to get data for page ${page} of district ${districtLink}:`, data.message);

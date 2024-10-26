@@ -23,14 +23,14 @@ export class DistrictsController {
 
     @Post('single-pages')
     @HttpCode(200)
-    async createDistrictPages(@Query() params: { districtLink: string }): Promise<any> {
-      return await this.districtsService.createDistrictPages(params.districtLink);
+    async saveDistrictPages(@Query() params: { districtLink: string }): Promise<any> {
+      return await this.districtsService.saveDistrictPages(params.districtLink);
     }
   
     @Post('all-pages')
     @HttpCode(200)
-    async createDistrictsPagesAll(): Promise<any> {
-      return await this.districtsService.processAllDistricts();
+    async saveDistrictsPagesAll(): Promise<any> {
+      return await this.districtsService.processSaveAllDistricts();
     }
   
     @Put('count-page')
