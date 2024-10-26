@@ -7,6 +7,13 @@ export class DistrictsController {
         private readonly districtsService: DistrictsService,
     ) { }
 
+    // запускает сохранение страниц в папке pages, формат страницы : page_111.json
+    @Post('main-pages')
+    @HttpCode(200)
+    async saveMainPages(@Query() params: { start: number; end: number }): Promise<any> {
+          return await this.districtsService.processSaveMainPagesAll(params.start,params.end);
+    }
+    
     // запускает создание облаcтей или регионов из страниц в папке pages, формат страницы : page_111.json
     @Post('from-pages')
     @HttpCode(200)

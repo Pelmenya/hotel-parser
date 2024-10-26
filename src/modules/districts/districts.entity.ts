@@ -28,10 +28,10 @@ export class Districts {
   description?: string;
 
   @Column({
-      type: 'geography',
-      spatialFeatureType: 'Polygon',
-      srid: 4326,
-      nullable: true,
+    type: 'geography',
+    spatialFeatureType: 'Polygon',
+    srid: 4326,
+    nullable: true,
   })
   location?: any; // Используем 'any', так как TypeORM напрямую не поддерживает GeoJSON
 
@@ -56,9 +56,13 @@ export class Districts {
   @Column('simple-array', { nullable: true })
   image_urls?: string[];
 
-  // Новое поле для отслеживания обработанных страниц
+  // Поле для отслеживания обработанных страниц при загрузке
   @Column('simple-array', { default: '' })
   processed_pages: number[] = [];
+
+  // Поле для отслеживания страниц, из которых успешно извлечены данные об отелях
+  @Column('simple-array', { default: '' })
+  processed_hotels_from_pages: number[] = [];
 
   // Новое поле для указания, что все страницы обработаны
   @Column({ default: false })
@@ -69,8 +73,4 @@ export class Districts {
 
   @UpdateDateColumn({ type: 'timestamp' }) // Автоматическое обновление даты изменения
   updated_at: Date;
-
-  // Новое поле для отслеживания обработанных отелей
-  @Column('simple-array', { default: '' })
-  processed_hotels: number[] = [];
 }

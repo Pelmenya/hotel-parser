@@ -1,50 +1,82 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ParserService } from '../parser/parser.service';
 import { HotelsRepository } from './hotels.repository';
 import { FilesService } from '../files/files.service';
 import { DistrictsRepository } from '../districts/districts.repository';
 import { Districts } from '../districts/districts.entity';
-import { Hotels } from './hotels.entity';
-
-
 import * as cheerio from 'cheerio';
-
 
 @Injectable()
 export class HotelsService {
+    private readonly logger = new Logger(HotelsService.name);
+    private readonly instanceId: number;
+    private readonly totalInstances: number;
+
     constructor(
+        private readonly configService: ConfigService,
         private readonly hotelsRepository: HotelsRepository,
         private readonly districtsRepository: DistrictsRepository,
         private readonly filesService: FilesService,
-    ) { }
-
-    async createHotelsFromDistrictsPages(district: string) {
-        const districtData = await this.districtsRepository.findByLink('/hotel/russia/' + district + '/');
-        if (!districtData) {
-            console.error(`No district found for ${district}`);
-            return [];
-        }
-
-        const { count_pages: totalPages } = districtData;
-        const batchSize = 10;
-        const hotels: Partial<Hotels>[] = [];
-
-        for (let i = 0; i < totalPages; i += batchSize) {
-            console.log(`Processing batch starting at page ${i + 1}`);
-            const batchPromises = [];
-            for (let j = 0; j < batchSize && i + j < totalPages; j++) {
-                batchPromises.push(this.extractAndStoreHotelsFromPage(districtData, i + j + 1, hotels));
-            }
-            await Promise.all(batchPromises);
-            console.log(`Processed batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(totalPages / batchSize)}`);
-        }
-
-        console.log('All district pages processed');
-        return hotels;
+    ) {
+        this.instanceId = this.configService.get<number>('INSTANCE_ID');
+        this.totalInstances = this.configService.get<number>('TOTAL_INSTANCES');
     }
 
-    private async extractAndStoreHotelsFromPage(district: Districts, page: number, hotels: Partial<Hotels>[]) {
+    async processAllHotels() {
+        try {
+            const districts = await this.districtsRepository.findAll();
+
+            const districtsToProcess = districts.filter(d => d.count_pages > 0 && d.all_pages_loaded);
+
+            for (const district of districtsToProcess) {
+                try {
+                    await this.createHotelsFromDistrictPages(district.district_link_ostrovok);
+                } catch (error) {
+                    this.logger.error(`Error processing hotels for district ${district.name}:`, error.stack);
+                }
+            }
+
+            this.logger.log(`Processed hotels for ${districtsToProcess.length} districts.`);
+        } catch (error) {
+            this.logger.error('Error processing all hotels:', error.stack);
+        }
+    }
+
+    async createHotelsFromDistrictPages(districtLink: string) {
+        const districtData = await this.districtsRepository.findByLink(districtLink);
+        if (!districtData) {
+            this.logger.error(`No district found for ${districtLink}`);
+            return;
+        }
+
+        const { count_pages: totalPages, processed_hotels_from_pages = [] } = districtData;
+        const processedPagesNumeric = processed_hotels_from_pages.map(Number);
+
+        const pagesToProcess = Array.from({ length: totalPages }, (_, i) => i + 1)
+            .filter(page => !processedPagesNumeric.includes(page)
+            );
+
+        if (pagesToProcess.length === 0) {
+            this.logger.log(`All pages for district ${districtLink} are already processed.`);
+            return;
+        }
+
+        for (const page of pagesToProcess) {
+            try {
+                const success = await this.extractAndStoreHotelsFromPage(districtData, page);
+                if (success) {
+                    // Обновляем массив только после успешной обработки страницы
+                    const updatedProcessedPages = [...processedPagesNumeric, page];
+                    await this.districtsRepository.updateProcessedHotelsFromPages(districtData.id, updatedProcessedPages);
+                    processedPagesNumeric.push(page); // Локально обновляем массив для последующих итераций
+                }
+            } catch (error) {
+                this.logger.error(`Error processing page ${page} of district ${districtLink}:`, error.stack);
+            }
+        }
+    }
+
+    private async extractAndStoreHotelsFromPage(district: Districts, page: number): Promise<boolean> {
         try {
             const data = await this.filesService.readDataPageRussianHotelsFromJson(district.district_link_ostrovok.split('/')[3], page);
             const $ = cheerio.load(data);
@@ -69,21 +101,19 @@ export class HotelsService {
                     district, // Добавляем район к данным отеля
                 };
 
-                // Добавляем данные отеля в массив
-                hotels.push(hotelData);
-
-                // Используем метод createIfNotExists для безопасной вставки
                 const createdHotel = await this.hotelsRepository.createIfNotExists(hotelData);
                 if (createdHotel) {
-                    console.log(`Hotel created: ${createdHotel.name}, ${createdHotel.address}`);
+                    this.logger.log(`Hotel created: ${createdHotel.name}, ${createdHotel.address}`);
                 } else {
-                    console.log(`Hotel already exists: ${name}, ${address}`);
+                    this.logger.log(`Hotel already exists: ${name}, ${address}`);
                 }
             }).get();
 
             await Promise.all(pagePromises);
+            return true; // Успешная обработка страницы
         } catch (error) {
-            console.error(`Error processing page ${page}:`, error);
+            this.logger.error(`Error processing page ${page}:`, error.stack);
+            return false; // Неуспешная обработка страницы
         }
     }
 

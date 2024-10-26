@@ -14,11 +14,18 @@ export class HotelsController {
         return await this.hotelsService.getRussianHotelsByPageAndDistrict(params.district, params.page);
     }
 
-    // запускает создание отелей из страниц в папке pages, формат страницы ex. page_111.json
+    // запускает создание отелей из страниц в папке pages/districts/<district>
     @Post('from-districts-pages')
     @HttpCode(200)
-    async createHotelsFromDistrictsPages(@Query() params: { district: string }): Promise<any> {
-        return await this.hotelsService.createHotelsFromDistrictsPages(params.district);
+    async createHotelsFromDistrictPages(@Query() params: { district: string }): Promise<any> {
+        return await this.hotelsService.createHotelsFromDistrictPages(params.district);
+    }
+
+    // запускает создание отелей из страниц в папке pages/districts/<district> на всех серверах
+    @Post('from-districts-pages-all')
+    @HttpCode(200)
+    async createHotelsFromDistrictPagesAll(@Query() params: { district: string }): Promise<any> {
+        return await this.hotelsService.processAllHotels();
     }
 
 }
