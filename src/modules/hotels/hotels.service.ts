@@ -5,6 +5,7 @@ import { FilesService } from '../files/files.service';
 import { DistrictsRepository } from '../districts/districts.repository';
 import { Districts } from '../districts/districts.entity';
 import * as cheerio from 'cheerio';
+import { ParserService } from '../parser/parser.service';
 
 @Injectable()
 export class HotelsService {
@@ -16,6 +17,7 @@ export class HotelsService {
         private readonly configService: ConfigService,
         private readonly hotelsRepository: HotelsRepository,
         private readonly districtsRepository: DistrictsRepository,
+        private readonly parserService: ParserService,
         private readonly filesService: FilesService,
     ) {
         this.instanceId = this.configService.get<number>('INSTANCE_ID');
@@ -120,4 +122,16 @@ export class HotelsService {
     async getRussianHotelsByPageAndDistrict(district: string, page: number) {
         return await this.filesService.readDataPageRussianHotelsFromJson(district, page);
     }
+
+    async saveHotelPage(hotelLink: string) {
+        const linkPaths = hotelLink.split('/');
+        linkPaths.splice(0,3);
+        const data = await this.parserService.parsePage(`/${linkPaths.join('/')}`);
+        if (data.error) {
+            this.logger.error(`Failed to get data for page of hotel ${hotelLink}:`, data.message);
+        }
+        await this.filesService.saveDataToJsonFile(data, `page_${hotelLink.split('/')[5]}.json`, `pages/hotels/${hotelLink.split('/')[5]}`);
+        return data;
+    }
+
 }

@@ -29,6 +29,12 @@ export class Hotels {
     @JoinColumn({ name: 'district_id' }) // Укажите явное имя столбца
     district?: Districts;
 
+    @Column({ default: false })
+    page_loaded: boolean;
+
+    @Column({ default: false })
+    page_processed: boolean;
+
     @CreateDateColumn({ type: 'timestamp' }) // Автоматическое заполнение даты создания
     created_at: Date;
 

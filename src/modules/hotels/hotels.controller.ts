@@ -1,6 +1,5 @@
 import { Controller, Get, HttpCode, Post, Query } from '@nestjs/common';
 import { HotelsService } from './hotels.service';
-import { FilesService } from '../files/files.service';
 
 @Controller('hotels')
 export class HotelsController {
@@ -9,7 +8,7 @@ export class HotelsController {
     ) { }
 
     // читает данные страницы отелей из созданного json файла при парсинге, для дальнейшей обработки или просмотра
-    @Get()
+    @Get('pages')
     async getRussianHotelsByPageAndDistrict(@Query() params: { district: string; page: number }): Promise<{ success: boolean }> {
         return await this.hotelsService.getRussianHotelsByPageAndDistrict(params.district, params.page);
     }
@@ -26,6 +25,13 @@ export class HotelsController {
     @HttpCode(200)
     async createHotelsFromDistrictPagesAll(@Query() params: { district: string }): Promise<any> {
         return await this.hotelsService.processAllHotels();
+    }
+
+    // запускает создание отелей из страниц в папке pages/districts/<district> на всех серверах
+    @Post('pages')
+    @HttpCode(200)
+    async saveHotelPage(@Query() params: { hotelLink: string }): Promise<any> {
+        return await this.hotelsService.saveHotelPage(params.hotelLink);
     }
 
 }

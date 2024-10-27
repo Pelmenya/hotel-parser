@@ -64,7 +64,7 @@ export class Districts {
   @Column('simple-array', { default: '' })
   processed_hotels_from_pages: number[] = [];
 
-  // Новое поле для указания, что все страницы обработаны
+  // Поле для указания, что все страницы обработаны
   @Column({ default: false })
   all_pages_loaded: boolean;
 
