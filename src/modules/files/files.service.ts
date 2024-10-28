@@ -55,7 +55,7 @@ export class FilesService {
     }
   }
 
-  async saveDataToJsonFile(data: any, filename: string, folderPath: string): Promise<void> {
+  async saveDataToJsonFile(data: any, filename: string, folderPath: string): Promise<{ success: boolean }> {
     const fullFolderPath = join(__dirname, '..', 'uploads', folderPath || '');
 
     // Создаем каталог, если он не существует
@@ -70,8 +70,10 @@ export class FilesService {
     try {
       await fsPromises.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
       console.log(`Данные успешно записаны в ${filePath}`);
+      return { success: true }
     } catch (error) {
       console.error('Ошибка при записи JSON в файл:', error);
+      return { success: false }
     }
   }
 

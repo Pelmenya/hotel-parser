@@ -8,8 +8,6 @@ export class ParserController {
   //Для получения html страницы запросом get 
   @Get('page')
   async getPage(@Query() params: { page: number }): Promise<string> {
-    return await this.parseService.parsePage({ page: params.page });
+    return await this.parseService.parsePage(params.page);
   }
-
-
 }

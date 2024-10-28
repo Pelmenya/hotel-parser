@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TransportService, TTransportLoadContent } from '../transport/transport.service';
+import * as cheerio from 'cheerio';
+
 
 @Injectable()
 export class ParserService {
@@ -18,6 +20,9 @@ export class ParserService {
                 const { data } = type === 'axios'
                     ? await this.transporService.getAxiosInstance().get(url)
                     : { data: await this.transporService.loadFullPageWithProxy(url) };
+                    const $ = cheerio.load(data);
+                    console.log($('.HotelHeader_name__hWIU0').text())
+            
                 return data;
             } catch (error) {
                 console.error(`Attempt ${attempt} - Error fetching page data:`, error.message);
