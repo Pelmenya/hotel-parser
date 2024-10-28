@@ -126,7 +126,7 @@ export class HotelsService {
     async saveHotelPage(hotelId: string, hotelLink: string) {
         const linkPaths = hotelLink.split('/');
         linkPaths.splice(0, 3);
-        const data = await this.parserService.parsePage(`/${linkPaths.join('/')}`);
+        const data = await this.parserService.parsePage(`/${linkPaths.join('/')}?q=2042&dates=04.02.2025-05.02.2025&guests=2&price=one`);
         if (data.error) {
             this.logger.error(`Failed to get data for page of hotel ${hotelLink}:`, data.message);
         }
@@ -162,4 +162,9 @@ export class HotelsService {
 
         return pagesToProcess.length;
     }
+
+    async getDataHotelFromJson(hotelLink: string) {
+        return this.filesService.readDataHotelFromJson(hotelLink);
+    }
+
 }
