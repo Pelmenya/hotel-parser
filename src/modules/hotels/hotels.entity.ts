@@ -35,6 +35,12 @@ export class Hotels {
     @Column({ default: false })
     page_processed: boolean;
 
+    @Column("simple-array", { nullable: true })
+    image_urls?: string[];
+
+    @Column({ default: false })
+    all_images_loaded: boolean;
+
     @CreateDateColumn({ type: 'timestamp' }) // Автоматическое заполнение даты создания
     created_at: Date;
 

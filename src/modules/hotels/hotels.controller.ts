@@ -27,11 +27,11 @@ export class HotelsController {
         return await this.hotelsService.processAllHotels();
     }
 
-    // запускает создание отелей из страниц в папке pages/districts/<district> на всех серверах
+    // запускает сохранение страниц отелей  в папке pages/hotels/<hotelLink> на всех серверах
     @Post('pages')
     @HttpCode(200)
-    async saveHotelPage(@Query() params: { hotelLink: string }): Promise<any> {
-        return await this.hotelsService.saveHotelPage(params.hotelLink);
+    async saveHotelsPages(): Promise<any> {
+        return await this.hotelsService.saveHotelsPages();
     }
 
 }

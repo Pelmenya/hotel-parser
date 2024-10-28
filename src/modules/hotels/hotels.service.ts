@@ -123,15 +123,43 @@ export class HotelsService {
         return await this.filesService.readDataPageRussianHotelsFromJson(district, page);
     }
 
-    async saveHotelPage(hotelLink: string) {
+    async saveHotelPage(hotelId: string, hotelLink: string) {
         const linkPaths = hotelLink.split('/');
-        linkPaths.splice(0,3);
+        linkPaths.splice(0, 3);
         const data = await this.parserService.parsePage(`/${linkPaths.join('/')}`);
         if (data.error) {
             this.logger.error(`Failed to get data for page of hotel ${hotelLink}:`, data.message);
         }
         await this.filesService.saveDataToJsonFile(data, `page_${hotelLink.split('/')[5]}.json`, `pages/hotels/${hotelLink.split('/')[5]}`);
+        await this.hotelsRepository.updateHotelPageLoaded(hotelId, true);
+
         return data;
     }
 
+    async saveHotelsPages() {
+        const hotels = await this.hotelsRepository.findAll();
+
+        hotels.sort((a, b) => a.id.localeCompare(b.id));
+
+        const pagesToProcess = Array.from({ length: hotels.length }, (_, i) => i + 1)
+            .filter(page =>
+                (page - 1) % this.totalInstances === this.instanceId - 1 && hotels[page] &&
+                !hotels[page].page_loaded
+            );
+
+        if (pagesToProcess.length === 0) {
+            this.logger.log(`All page for hotels are already loaded.`);
+            return;
+        }
+
+        for (const page of pagesToProcess) {
+            try {
+                await this.saveHotelPage(hotels[page].id, hotels[page].hotel_link_ostrovok)
+            } catch (error) {
+                this.logger.error(`Error loaded page ${page} of hotel ${hotels[page].hotel_link_ostrovok}:`, error.stack);
+            }
+        }
+
+        return pagesToProcess.length;
+    }
 }

@@ -8,7 +8,7 @@ export class HotelsRepository {
     constructor(
         @InjectRepository(Hotels)
         private hotelsRepository: Repository<Hotels>,
-    ) {}
+    ) { }
 
     async findAll(): Promise<Hotels[]> {
         return await this.hotelsRepository.find();
@@ -55,4 +55,18 @@ export class HotelsRepository {
     async findByNameAndAddress(name: string, address: string): Promise<Hotels | undefined> {
         return this.hotelsRepository.findOne({ where: { name, address } });
     }
+
+    async findHotelsWithNotSavePageByLimitAndOffset(limit: number, offset: number): Promise<Hotels[] | undefined> {
+        return this.hotelsRepository.find({
+            order: {
+                id: 'ASC'
+            },
+            take: limit,
+            skip: offset
+        })
+    }
+
+    async updateHotelPageLoaded(id: string, page_loaded: boolean): Promise<void> {
+        await this.hotelsRepository.update(id, { page_loaded });
+      }
 }
