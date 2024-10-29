@@ -17,12 +17,10 @@ export class ParserService {
 
         for (let attempt = 1; attempt <= retries; attempt++) {
             try {
+                console.log(url)
                 const { data } = type === 'axios'
                     ? await this.transporService.getAxiosInstance().get(url)
                     : { data: await this.transporService.loadFullPageWithProxy(url) };
-                    const $ = cheerio.load(data);
-                    console.log($('.HotelHeader_name__hWIU0').text())
-            
                 return data;
             } catch (error) {
                 console.error(`Attempt ${attempt} - Error fetching page data:`, error.message);
@@ -32,5 +30,4 @@ export class ParserService {
             }
         }
     }
-
 }

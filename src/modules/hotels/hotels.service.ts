@@ -167,5 +167,8 @@ export class HotelsService {
     async getDataHotelFromJson(hotelLink: string) {
         return this.filesService.readDataHotelFromJson(hotelLink);
     }
+/*     const $ = cheerio.load(data);
+    console.log($('.HotelHeader_name__hWIU0').text())
+ */
 
 }

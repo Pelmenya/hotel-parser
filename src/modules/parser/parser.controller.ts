@@ -10,4 +10,9 @@ export class ParserController {
   async getPage(@Query() params: { page: number }): Promise<string> {
     return await this.parseService.parsePage(params.page);
   }
+
+  @Get('puppeteer')
+  async getPageWithPuppeteer(@Query() params: { page: number }): Promise<string> {
+    return await this.parseService.parsePage(params.page, 'puppeteer');
+  }
 }
