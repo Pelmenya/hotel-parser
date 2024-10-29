@@ -13,16 +13,17 @@ export class TransportService {
     private proxyUrlPuppeteer: string;
     private proxyUsername: string;
     private proxyPassword: string;
-
+    private proxyHost: string;
+    private proxyPort: string;
 
     constructor(private readonly configService: ConfigService) {
-        const proxyHost = this.configService.get('PROXY_HOST');
-        const proxyPort = this.configService.get('PROXY_PORT');
+        this.proxyHost = this.configService.get('PROXY_HOST');
+        this.proxyPort = this.configService.get('PROXY_PORT');
         this.proxyUsername = this.configService.get('PROXY_LOGIN');
         this.proxyPassword = this.configService.get('PROXY_PASSWORD');
 
-        this.proxyUrl = `socks5://${this.proxyUsername}:${this.proxyPassword}@${proxyHost}:${proxyPort}`;
-        this.proxyUrlPuppeteer = `socks5://${proxyHost}:${proxyPort}`;; // убедитесь, что порт совпадает
+        this.proxyUrl = `socks5://${this.proxyUsername}:${this.proxyPassword}@${this.proxyHost}:${this.proxyPort}`;
+        this.proxyUrlPuppeteer = `socks5://${this.proxyHost}:${this.proxyPort}`;
 
         const socksAgent = new SocksProxyAgent(this.proxyUrl);
 
@@ -83,7 +84,7 @@ export class TransportService {
             });
             await page.goto('https://api.ipify.org', { waitUntil: 'networkidle2' });
             const content = await page.evaluate(() => document.body.textContent);
-            console.log('Your IP through Puppeteer is:', content);
+            console.log('Your IP through Puppeteer proxy is:', content);
             await browser.close();
         } catch (error) {
             console.error('Puppeteer error:', error);
