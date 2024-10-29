@@ -56,17 +56,16 @@ export class HotelsRepository {
         return this.hotelsRepository.findOne({ where: { name, address } });
     }
 
-    async findHotelsWithNotSavePageByLimitAndOffset(limit: number, offset: number): Promise<Hotels[] | undefined> {
+    async findHotelsWithSavePageById(id: string): Promise<Hotels[] | undefined> {
         return this.hotelsRepository.find({
-            order: {
-                id: 'ASC'
-            },
-            take: limit,
-            skip: offset
+            where: {
+                id,
+                page_loaded: true
+            }
         })
     }
 
     async updateHotelPageLoaded(id: string, page_loaded: boolean): Promise<void> {
         await this.hotelsRepository.update(id, { page_loaded });
-      }
+    }
 }

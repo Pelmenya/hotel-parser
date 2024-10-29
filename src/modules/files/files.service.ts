@@ -1,12 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import axios from 'axios';
 import { createWriteStream, promises as fsPromises, readFile } from 'fs';
 import { join } from 'path';
+import { TransportService } from '../transport/transport.service';
 
 @Injectable()
 export class FilesService {
-  async downloadImage(url: string, folderPath: string): Promise<string> {
-    const filename = url.split('/').pop();
+  constructor(
+    private readonly transportService: TransportService
+  ) {}
+
+  async downloadImage(url: string, folderPath: string, filename: string): Promise<string> {
     if (!filename) {
       throw new Error('Некорректный URL');
     }
@@ -22,16 +25,13 @@ export class FilesService {
     const path = join(fullFolderPath, filename);
     const writer = createWriteStream(path);
 
-    const response = await axios({
-      url,
-      method: 'GET',
-      responseType: 'stream',
-    });
+    const axiosInstance = this.transportService.getAxiosInstance('stream');
+    const response = await axiosInstance.get(url);
 
     response.data.pipe(writer);
 
     return new Promise((resolve, reject) => {
-      writer.on('finish', () => resolve(path));
+      writer.on('finish', () => resolve(`Save image to path: `+ path));
       writer.on('error', reject);
     });
   }

@@ -1,4 +1,4 @@
-import { Controller, Get, HttpCode, Post, Query } from '@nestjs/common';
+import { Controller, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
 import { HotelsService } from './hotels.service';
 
 @Controller('hotels')
@@ -39,4 +39,9 @@ export class HotelsController {
         return await this.hotelsService.saveHotelsPages();
     }
 
+    @Post(':id')
+    @HttpCode(200)
+    async createHotelFromPageById(@Param('id') id: string,): Promise<any> {
+        return await this.hotelsService.extractAndStoreHotelFromPage(id);
+    }
 }

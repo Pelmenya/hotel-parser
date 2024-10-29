@@ -65,7 +65,7 @@ export class HotelsService {
 
         for (const page of pagesToProcess) {
             try {
-                const success = await this.extractAndStoreHotelsFromPage(districtData, page);
+                const success = await this.extractAndStoreHotelsFromDistrictPage(districtData, page);
                 if (success) {
                     // Обновляем массив только после успешной обработки страницы
                     const updatedProcessedPages = [...processedPagesNumeric, page];
@@ -78,7 +78,7 @@ export class HotelsService {
         }
     }
 
-    private async extractAndStoreHotelsFromPage(district: Districts, page: number): Promise<boolean> {
+    private async extractAndStoreHotelsFromDistrictPage(district: Districts, page: number): Promise<boolean> {
         try {
             const data = await this.filesService.readDataPageRussianHotelsFromJson(district.district_link_ostrovok.split('/')[3], page);
             const $ = cheerio.load(data);
@@ -167,6 +167,28 @@ export class HotelsService {
     async getDataHotelFromJson(hotelLink: string) {
         return this.filesService.readDataHotelFromJson(hotelLink);
     }
+
+    async extractAndStoreHotelFromPage(id: string) {
+        const hotels = await this.hotelsRepository.findHotelsWithSavePageById(id);
+        if (hotels.length) {
+            const hotel = hotels[0];
+            const data = await this.getDataHotelFromJson(hotel.hotel_link_ostrovok.split('/')[5])
+            const $ = cheerio.load(data);
+            hotel.name = $('.HotelHeader_name__hWIU0').text().trim();
+            hotel.main_image_url = $('.ScrollGallery_slide__My3l7').first().find('img').attr('src');
+            
+            
+            $('.ScrollGallery_slide__My3l7').map((_, el) => {
+                hotel.images_urls.push($(el).find('img').attr('src'));
+            })
+
+            console.log(hotel);
+
+
+            return hotel;
+        }
+    }
+
 /*     const $ = cheerio.load(data);
     console.log($('.HotelHeader_name__hWIU0').text())
  */

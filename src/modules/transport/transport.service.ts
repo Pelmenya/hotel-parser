@@ -33,12 +33,17 @@ export class TransportService {
         });
 
         this.checkAxiosIP();
-        this.checkPuppeteerIP();
+      //  this.checkPuppeteerIP();
     }
 
-    getAxiosInstance() {
-        return this.axiosInstance;
+    getAxiosInstance(responseType: 'json' | 'stream' = 'json'): AxiosInstance {
+        return axios.create({
+            httpAgent: this.axiosInstance.defaults.httpAgent,
+            httpsAgent: this.axiosInstance.defaults.httpsAgent,
+            responseType: responseType,
+        });
     }
+
 
     async loadFullPageWithProxy(url: string) {
         const browser = await puppeteer.launch({

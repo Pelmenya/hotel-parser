@@ -22,8 +22,11 @@ export class Hotels {
     @Column({ type: 'int', nullable: true }) // Указываем тип для числа
     stars?: number;
 
+    @Column({ nullable: true })
+    main_image_url?: string;
+
     @Column("simple-array", { nullable: true })
-    prev_image_urls?: string[];
+    images_urls?: string[] = [];
 
     @ManyToOne(() => Districts, (district) => district.hotels, { nullable: true })
     @JoinColumn({ name: 'district_id' }) // Укажите явное имя столбца
