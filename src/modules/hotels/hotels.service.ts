@@ -179,31 +179,48 @@ export class HotelsService {
     async extractAndStoreHotelFromPage(id: string) {
         const hotels = await this.hotelsRepository.findHotelsWithSavePageById(id);
         if (hotels.length) {
-          const hotel = hotels[0];
-          const data = await this.getDataHotelFromJson(hotel.hotel_link_ostrovok.split('/')[5]);
-          const $ = cheerio.load(data);
-          hotel.name = $('.HotelHeader_name__hWIU0').text().trim();
-      
-          const main_image_url = replaceResolutionInUrl($('.ScrollGallery_slide__My3l7').first().find('img').attr('src'), '1024x768');
-          const additional_image_urls: string[] = $('.ScrollGallery_slide__My3l7').map((idx, el) => {
-            if (idx !== 0)
-                return replaceResolutionInUrl($(el).find('img').attr('src'), '1024x768');
-          }).get();
-      
-          const allImageUrls = [main_image_url, ...additional_image_urls];
-          await this.imagesService.processAndSaveImages(allImageUrls, hotel.id);
-      
-          console.log(hotel);
-      
-          // Сохранение обновленных данных отеля в базу данных
-          await this.hotelsRepository.save(hotel);
-      
-          return hotel;
+            const hotel = hotels[0];
+            const data = await this.getDataHotelFromJson(hotel.hotel_link_ostrovok.split('/')[5]);
+            const $ = cheerio.load(data);
+            hotel.name = $('.HotelHeader_name__hWIU0').text().trim();
+
+            const main_image_url = replaceResolutionInUrl($('.ScrollGallery_slide__My3l7').first().find('img').attr('src'), '1024x768');
+            const additional_image_urls: string[] = $('.ScrollGallery_slide__My3l7').map((idx, el) => {
+                if (idx !== 0)
+                    return replaceResolutionInUrl($(el).find('img').attr('src'), '1024x768');
+            }).get();
+
+//            await this.imagesService.processAndSaveImages([main_image_url], 'main', hotel.id)
+  //          await this.imagesService.processAndSaveImages(additional_image_urls, 'additional', hotel.id);
+
+            this.logger.log(hotel);
+
+            // Сохранение обновленных данных отеля в базу данных
+            //    await this.hotelsRepository.save(hotel);
+
+            return hotel;
         }
-      }
-      
-    /*     const $ = cheerio.load(data);
-        console.log($('.HotelHeader_name__hWIU0').text())
-     */
+    }
+
+    async extractAndStoreAndProcessHotelImagesFromPage(id: string) {
+        const hotels = await this.hotelsRepository.findHotelsWithSavePageById(id);
+        if (hotels.length) {
+            const hotel = hotels[0];
+            const data = await this.getDataHotelFromJson(hotel.hotel_link_ostrovok.split('/')[5]);
+            const $ = cheerio.load(data);
+
+            const main_image_url = replaceResolutionInUrl($('.ScrollGallery_slide__My3l7').first().find('img').attr('src'), '1024x768');
+            const additional_image_urls: string[] = $('.ScrollGallery_slide__My3l7').map((idx, el) => {
+                if (idx !== 0)
+                    return replaceResolutionInUrl($(el).find('img').attr('src'), '1024x768');
+            }).get();
+
+            await this.imagesService.processAndSaveImages([main_image_url], 'main', hotel.id)
+            await this.imagesService.processAndSaveImages(additional_image_urls, 'additional', hotel.id);
+
+
+            return [main_image_url, ...additional_image_urls];
+        }
+    }
 
 }

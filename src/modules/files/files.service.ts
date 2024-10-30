@@ -121,8 +121,6 @@ export class FilesService {
         }
       });
     });
-
-
   }
   async readDataFromJsonFile(filename: string, folderPath: string) {
     const fullFolderPath = join(__dirname, '..', 'uploads', folderPath || '');

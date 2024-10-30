@@ -10,6 +10,8 @@ import { FilesModule } from './modules/files/files.module';
 import { DistrictsModule } from './modules/districts/districts.module';
 import { TransportModule } from './modules/transport/transport.module';
 import { ImagesModule } from './modules/images/images.module';
+import { AmenitiesModule } from './modules/amenities/amenities.module';
+import { GeoModule } from './modules/geo/geo.module';
 
 @Module({
   imports: [
@@ -24,6 +26,8 @@ import { ImagesModule } from './modules/images/images.module';
     DistrictsModule,
     TransportModule,
     ImagesModule,
+    AmenitiesModule,
+    GeoModule,
   ],
   controllers: [AppController],
   providers: [AppService],

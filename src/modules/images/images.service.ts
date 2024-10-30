@@ -11,13 +11,13 @@ export class ImagesService {
         private readonly imagesRepository: ImagesRepository
     ) { }
 
-    async processAndSaveImages(imageUrls: string[], hotelId: string): Promise<void> {
+    async processAndSaveImages(imageUrls: string[], type: 'main'| 'additional' = 'additional', hotelId: string): Promise<void> {
         const sizes: { width: TImageWidth, height: TImageHeight; name: TImageSize }[] = [
 //            { width: 1024, height: 768, name: 'large' },
-//            { width: 828, height: 560, name: 'medium' },
-//            { width: 220, height: 220, name: 'small' },
+            { width: 828, height: 560, name: 'medium' },
             { width: 640, height: 400, name: 'main' },
             { width: 240, height: 240, name: 'thumbnail' }
+//          { width: 220, height: 220, name: 'small' },
         ];
 
         for (const imageUrl of imageUrls) {
@@ -33,7 +33,7 @@ export class ImagesService {
                 image.size = size?.name;
                 image.width = size?.width;
                 image.height = size?.height;
-                image.type = 'additional'; // или 'main' в зависимости от контекста
+                image.type = type; //'additional' или 'main' в зависимости от контекста
                 image.hotel = { id: hotelId } as any; // Используем частичное представление объекта отеля
                 image.path = resizedImagePath.replace('/app', '');
                 await this.imagesRepository.save(image);
