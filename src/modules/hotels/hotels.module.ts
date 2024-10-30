@@ -7,6 +7,7 @@ import { ParserModule } from '../parser/parser.module';
 import { HotelsService } from './hotels.service';
 import { FilesModule } from '../files/files.module';
 import { DistrictsModule } from '../districts/districts.module';
+import { ImagesModule } from '../images/images.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { DistrictsModule } from '../districts/districts.module';
     FilesModule,
     ParserModule,
     DistrictsModule,
+    ImagesModule,
   ],
   providers: [
     HotelsRepository, 

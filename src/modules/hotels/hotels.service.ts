@@ -4,8 +4,14 @@ import { HotelsRepository } from './hotels.repository';
 import { FilesService } from '../files/files.service';
 import { DistrictsRepository } from '../districts/districts.repository';
 import { Districts } from '../districts/districts.entity';
-import * as cheerio from 'cheerio';
 import { ParserService } from '../parser/parser.service';
+
+import * as cheerio from 'cheerio';
+import { ImagesService } from '../images/images.service';
+
+function replaceResolutionInUrl(url: string, newResolution: string): string {
+    return url.replace(/\/t\/x?\d+x\d+\//, `/t/${newResolution}/`);
+}
 
 @Injectable()
 export class HotelsService {
@@ -19,6 +25,8 @@ export class HotelsService {
         private readonly districtsRepository: DistrictsRepository,
         private readonly parserService: ParserService,
         private readonly filesService: FilesService,
+        private readonly imagesService: ImagesService,
+
     ) {
         this.instanceId = this.configService.get<number>('INSTANCE_ID');
         this.totalInstances = this.configService.get<number>('TOTAL_INSTANCES');
@@ -171,26 +179,31 @@ export class HotelsService {
     async extractAndStoreHotelFromPage(id: string) {
         const hotels = await this.hotelsRepository.findHotelsWithSavePageById(id);
         if (hotels.length) {
-            const hotel = hotels[0];
-            const data = await this.getDataHotelFromJson(hotel.hotel_link_ostrovok.split('/')[5])
-            const $ = cheerio.load(data);
-            hotel.name = $('.HotelHeader_name__hWIU0').text().trim();
-            hotel.main_image_url = $('.ScrollGallery_slide__My3l7').first().find('img').attr('src');
-            
-            
-            $('.ScrollGallery_slide__My3l7').map((_, el) => {
-                hotel.images_urls.push($(el).find('img').attr('src'));
-            })
-
-            console.log(hotel);
-
-
-            return hotel;
+          const hotel = hotels[0];
+          const data = await this.getDataHotelFromJson(hotel.hotel_link_ostrovok.split('/')[5]);
+          const $ = cheerio.load(data);
+          hotel.name = $('.HotelHeader_name__hWIU0').text().trim();
+      
+          const main_image_url = replaceResolutionInUrl($('.ScrollGallery_slide__My3l7').first().find('img').attr('src'), '1024x768');
+          const additional_image_urls: string[] = $('.ScrollGallery_slide__My3l7').map((idx, el) => {
+            if (idx !== 0)
+                return replaceResolutionInUrl($(el).find('img').attr('src'), '1024x768');
+          }).get();
+      
+          const allImageUrls = [main_image_url, ...additional_image_urls];
+          await this.imagesService.processAndSaveImages(allImageUrls, hotel.id);
+      
+          console.log(hotel);
+      
+          // Сохранение обновленных данных отеля в базу данных
+          await this.hotelsRepository.save(hotel);
+      
+          return hotel;
         }
-    }
-
-/*     const $ = cheerio.load(data);
-    console.log($('.HotelHeader_name__hWIU0').text())
- */
+      }
+      
+    /*     const $ = cheerio.load(data);
+        console.log($('.HotelHeader_name__hWIU0').text())
+     */
 
 }

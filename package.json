@@ -38,9 +38,10 @@
     "puppeteer": "^23.6.1",
     "reflect-metadata": "0.2.0",
     "rxjs": "7.8.1",
-    "sharp": "0.33.5",
+    "sharp": "^0.33.5",
     "socks-proxy-agent": "8.0.4",
-    "typeorm": "0.3.20"
+    "typeorm": "0.3.20",
+    "uuid": "11.0.2"
   },
   "devDependencies": {
     "@nestjs/cli": "10.0.0",

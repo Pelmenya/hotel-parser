@@ -2,12 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { createWriteStream, promises as fsPromises, readFile } from 'fs';
 import { join } from 'path';
 import { TransportService } from '../transport/transport.service';
+import sharp from 'sharp';
 
 @Injectable()
 export class FilesService {
   constructor(
     private readonly transportService: TransportService
-  ) {}
+  ) { }
 
   async downloadImage(url: string, folderPath: string, filename: string): Promise<string> {
     if (!filename) {
@@ -31,9 +32,36 @@ export class FilesService {
     response.data.pipe(writer);
 
     return new Promise((resolve, reject) => {
-      writer.on('finish', () => resolve(`Save image to path: `+ path));
+      writer.on('finish', () => resolve(path));
       writer.on('error', reject);
     });
+  }
+
+  async resizeAndConvertImage(filePath: string, sizes: { width: number; height: number; }[], outputFolderPath: string): Promise<string[]> {
+    const convertedImagesPaths: string[] = [];
+
+    try {
+      for (const size of sizes) {
+        const outputFolder = join(__dirname, '..', 'uploads', outputFolderPath, `${size.width}x${size.height}`);
+
+        await fsPromises.mkdir(outputFolder, { recursive: true });
+
+        const outputFilePath = join(outputFolder, filePath.split('/').pop().replace(/\.\w+$/, '.webp'));
+        convertedImagesPaths.push(outputFilePath);
+
+        await sharp(filePath)
+          .resize(size.width, size.height)
+          .webp()
+          .toFile(outputFilePath);
+      }
+
+      // Удаление исходного файла после обработки
+      await fsPromises.unlink(filePath);
+    } catch (error) {
+      console.error('Ошибка при изменении размеров изображения:', error);
+    }
+
+    return convertedImagesPaths;
   }
 
   async saveDataToFile(data: any, filename: string, folderPath: string): Promise<void> {

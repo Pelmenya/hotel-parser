@@ -3,6 +3,7 @@ import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { Countries } from 'src/modules/countries/countries.entity';
 import { Districts } from 'src/modules/districts/districts.entity';
 import { Hotels } from 'src/modules/hotels/hotels.entity';
+import { Images } from 'src/modules/images/images.entity';
 
 export const getPostgresConfig = async (
   configService: ConfigService,
@@ -17,7 +18,8 @@ export const getPostgresConfig = async (
     entities: [
       Countries, 
       Hotels, 
-      Districts
+      Districts,
+      Images
     ],
     synchronize: true,
   };

@@ -68,4 +68,9 @@ export class HotelsRepository {
     async updateHotelPageLoaded(id: string, page_loaded: boolean): Promise<void> {
         await this.hotelsRepository.update(id, { page_loaded });
     }
+
+    async save(hotel: Hotels): Promise<Hotels> {
+        return this.hotelsRepository.save(hotel);
+    }
+
 }

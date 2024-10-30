@@ -9,6 +9,7 @@ import { HotelsModule } from './modules/hotels/hotels.module';
 import { FilesModule } from './modules/files/files.module';
 import { DistrictsModule } from './modules/districts/districts.module';
 import { TransportModule } from './modules/transport/transport.module';
+import { ImagesModule } from './modules/images/images.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { TransportModule } from './modules/transport/transport.module';
     FilesModule,
     DistrictsModule,
     TransportModule,
+    ImagesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
