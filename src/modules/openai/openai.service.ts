@@ -4,6 +4,10 @@ import OpenAI from 'openai';
 import { TAbout } from '../abouts/abouts.types';
 import { setDelay } from 'src/helpers/delay';
 
+export type TOpenAIDataRes = {
+    ru: TAbout;
+    en: TAbout;
+}
 @Injectable()
 export class OpenAIService {
     private readonly logger = new Logger(OpenAIService.name);
@@ -19,9 +23,9 @@ export class OpenAIService {
         this.openAIModel = this.configService.get('OPENAI_MODEL')
     }
 
-    async generate(data: TAbout) {
+    async generate(data: TAbout): Promise<TOpenAIDataRes> {
         const content = await this.generateHotelDescription(data);
-        const parsedData = this.parseResponse(content);
+        const parsedData: TAbout[] = this.parseResponse(content);
         return { ru: parsedData[0], en: parsedData[1] };
     };
 
@@ -39,33 +43,33 @@ export class OpenAIService {
                       на русском и английском языках. 
                       Данные должны быть структурированы в два отдельных JSON-блока: 
                       один для русского, другой для английского.
-                      ${JSON.stringify(data)}` 
+                      ${JSON.stringify(data)}`
                 }],
                 model: this.openAIModel,
                 temperature: 0.7,
                 max_tokens: 1500,
             });
-    
+
             const content = chatCompletion.choices[0].message.content;
-    
+
             // Валидация формата ответа
             if (!this.isValidJsonResponse(content)) {
                 throw new Error('Invalid JSON response');
             }
-    
+
             return content;
-    
+
         } catch (error) {
             this.logger.error(`Error in generating hotel description (attempt ${attempt}):`, error);
-    
+
             if (attempt < maxAttempts) {
                 // Рассчитываем задержку перед следующей попыткой
                 const delay = Math.pow(2, attempt - 1) * 1000; // 1000 ms = 1 second
                 this.logger.log(`Retrying in ${delay / 1000} seconds...`);
-    
+
                 // Делаем задержку перед следующим вызовом
                 await setDelay(delay);
-    
+
                 // Рекурсивный вызов с увеличенной попыткой
                 return this.generateHotelDescription(data, attempt + 1, maxAttempts);
             } else {
@@ -73,7 +77,7 @@ export class OpenAIService {
             }
         }
     }
-    
+
     private isValidJsonResponse(content: string): boolean {
         // Простая проверка на наличие JSON-блоков (можно улучшить для конкретного формата)
         const regex = /```json\n([\s\S]*?)\n```/g;

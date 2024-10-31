@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { SocksProxyAgent } from 'socks-proxy-agent';
 import axios, { AxiosInstance } from 'axios';
 import * as puppeteer from 'puppeteer';
+import S3 from 'aws-sdk/clients/s3';
 
 export type TTransportLoadContent = 'puppeteer' | 'axios';
 

@@ -9,6 +9,7 @@ import { FilesModule } from '../files/files.module';
 import { DistrictsModule } from '../districts/districts.module';
 import { ImagesModule } from '../images/images.module';
 import { OpenaiModule } from '../openai/openai.module';
+import { AboutsModule } from '../abouts/abouts.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { OpenaiModule } from '../openai/openai.module';
     DistrictsModule,
     ImagesModule,
     OpenaiModule,
+    AboutsModule,
   ],
   providers: [
     HotelsRepository, 

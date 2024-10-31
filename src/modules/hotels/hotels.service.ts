@@ -11,6 +11,8 @@ import { ImagesService } from '../images/images.service';
 import { replaceResolutionInUrl } from 'src/helpers/replace-resolution-in-url';
 import { TAbout } from '../abouts/abouts.types';
 import { OpenAIService } from '../openai/openai.service';
+import { Abouts } from '../abouts/abouts.entity';
+import { AboutsService } from '../abouts/abouts.service';
 
 
 @Injectable()
@@ -27,6 +29,8 @@ export class HotelsService {
         private readonly filesService: FilesService,
         private readonly imagesService: ImagesService,
         private readonly openAIService: OpenAIService,
+        private readonly aboutsService: AboutsService,
+
 
     ) {
         this.instanceId = this.configService.get<number>('INSTANCE_ID');
@@ -180,6 +184,7 @@ export class HotelsService {
     async extractAndStoreHotelFromPage(id: string) {
         const hotels = await this.hotelsRepository.findHotelsWithSavePageById(id);
         if (hotels.length) {
+            const promises = []
             const hotel = hotels[0];
             const data = await this.getDataHotelFromJson(hotel.hotel_link_ostrovok.split('/')[5]);
             const $ = cheerio.load(data);
@@ -198,9 +203,12 @@ export class HotelsService {
             const dataDescription: TAbout = {
                 aboutHotelDescriptionTitle,
                 aboutHotelDescriptions
-            } 
+            }
 
             const openAIData = await this.openAIService.generate(dataDescription);
+
+            await this.aboutsService.saveOpenAIData(openAIData, id);
+
 
             const main_image_url = replaceResolutionInUrl($('.ScrollGallery_slide__My3l7').first().find('img').attr('src'), '1024x768');
             const additional_image_urls: string[] = $('.ScrollGallery_slide__My3l7').map((idx, el) => {
@@ -208,13 +216,13 @@ export class HotelsService {
                     return replaceResolutionInUrl($(el).find('img').attr('src'), '1024x768');
             }).get();
 
-                    //await this.imagesService.processAndSaveImages([main_image_url], 'main', hotel.id)
-                    //await this.imagesService.processAndSaveImages(additional_image_urls, 'additional', hotel.id);
+            //await this.imagesService.processAndSaveImages([main_image_url], 'main', hotel.id)
+            //await this.imagesService.processAndSaveImages(additional_image_urls, 'additional', hotel.id);
 
             this.logger.log(hotel);
 
             // Сохранение обновленных данных отеля в базу данных
-            //    await this.hotelsRepository.save(hotel);
+            // await this.hotelsRepository.save(hotel);
 
             return { hotel, openAIData };
         }

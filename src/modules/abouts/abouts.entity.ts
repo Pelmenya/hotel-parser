@@ -12,14 +12,14 @@ export class Abouts {
     @Column({ nullable: true })
     title: string;
 
-    @Column("jsonb", { array: true }) // Используем jsonb и указываем, что это массив
-    descriptions: TDescription[];
+    @Column("jsonb") // Используем jsonb и указываем, что это массив
+    descriptions: TDescription[] = [];
 
-    @Column({ nullable: true })
+    @Column({type: String, nullable: true })
     language: TLanguage;
 
     @Index()
-    @ManyToOne(() => Hotels, (hotel) => hotel.images, { nullable: true })
+    @ManyToOne(() => Hotels, (hotel) => hotel.abouts, { nullable: true })
     @JoinColumn({ name: 'hotel_id' }) // Явное имя столбца
     hotel?: Hotels;
 
