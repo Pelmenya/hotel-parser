@@ -12,7 +12,7 @@ export class Abouts {
     title: string;
 
     @Column("jsonb", { array: true }) // Используем jsonb и указываем, что это массив
-    jsonArray: TDescription[];
+    descriptions: TDescription[];
 
     @Index()
     @ManyToOne(() => Hotels, (hotel) => hotel.images, { nullable: true })
