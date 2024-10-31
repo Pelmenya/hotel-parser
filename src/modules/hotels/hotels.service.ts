@@ -8,10 +8,10 @@ import { ParserService } from '../parser/parser.service';
 
 import * as cheerio from 'cheerio';
 import { ImagesService } from '../images/images.service';
+import { replaceResolutionInUrl } from 'src/helpers/replace-resolution-in-url';
+import { TAboutHotel } from './hotel.types';
+import { OpenAIService } from '../openai/openai.service';
 
-function replaceResolutionInUrl(url: string, newResolution: string): string {
-    return url.replace(/\/t\/x?\d+x\d+\//, `/t/${newResolution}/`);
-}
 
 @Injectable()
 export class HotelsService {
@@ -26,6 +26,7 @@ export class HotelsService {
         private readonly parserService: ParserService,
         private readonly filesService: FilesService,
         private readonly imagesService: ImagesService,
+        private readonly openAIService: OpenAIService,
 
     ) {
         this.instanceId = this.configService.get<number>('INSTANCE_ID');
@@ -193,42 +194,29 @@ export class HotelsService {
                 })
             }
             )
-            aboutHotelDescriptions.push({
-                "aboutHotelDescriptionTitle": "Обзор отеля",
-                "aboutHotelDescriptions": [
-                    {
-                        "idx": 0,
-                        "title": "Местоположение",
-                        "paragraph": "Отель «Интурист-Ставрополь» удобно расположен в живописной части центра Ставрополя, что делает его идеальным выбором для деловых и туристических поездок. Отель находится всего в 25 км от аэропорта Ставрополя и в 5 км от железнодорожного вокзала, что обеспечивает удобный доступ к основным транспортным узлам города."
-                    },
-                    {
-                        "idx": 1,
-                        "title": "Услуги и Удобства",
-                        "paragraph": "Отель предлагает своим гостям бесплатный Wi-Fi на всей территории, что обеспечивает постоянный доступ в интернет. Для удобства гостей предусмотрена бесплатная парковка. В ресторане отеля подаются изысканные блюда европейской кухни, которые удовлетворят вкусы самых взыскательных гурманов. Для проведения мероприятий доступны три зала: большой зал, конференц-зал и бизнес-холл, что позволяет организовать мероприятия любого масштаба."
-                    },
-                    {
-                        "idx": 2,
-                        "title": "Характеристики номеров",
-                        "paragraph": "Наш отель предлагает разнообразие категорий номеров, включая стандартные, улучшенные, люкс, полулюкс, апартаменты и номера VIP класса, что позволяет каждому гостю выбрать наиболее подходящий вариант размещения. Номера с балконами предлагают дополнительное пространство для отдыха и наслаждения видом на город."
-                    }
-                ]
-            })
-            
+
+            const dataDescription: TAboutHotel = {
+                aboutHotelDescriptionTitle,
+                aboutHotelDescriptions
+            } 
+
+            const openAIData = await this.openAIService.generate(dataDescription);
+
             const main_image_url = replaceResolutionInUrl($('.ScrollGallery_slide__My3l7').first().find('img').attr('src'), '1024x768');
             const additional_image_urls: string[] = $('.ScrollGallery_slide__My3l7').map((idx, el) => {
                 if (idx !== 0)
                     return replaceResolutionInUrl($(el).find('img').attr('src'), '1024x768');
             }).get();
 
-            //            await this.imagesService.processAndSaveImages([main_image_url], 'main', hotel.id)
-            //          await this.imagesService.processAndSaveImages(additional_image_urls, 'additional', hotel.id);
+                    //await this.imagesService.processAndSaveImages([main_image_url], 'main', hotel.id)
+                    //await this.imagesService.processAndSaveImages(additional_image_urls, 'additional', hotel.id);
 
             this.logger.log(hotel);
 
             // Сохранение обновленных данных отеля в базу данных
             //    await this.hotelsRepository.save(hotel);
 
-            return { hotel, aboutHotelDescriptionTitle, aboutHotelDescriptions };
+            return { hotel, openAIData };
         }
     }
 

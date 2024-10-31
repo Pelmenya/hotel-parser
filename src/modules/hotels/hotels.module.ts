@@ -8,6 +8,7 @@ import { HotelsService } from './hotels.service';
 import { FilesModule } from '../files/files.module';
 import { DistrictsModule } from '../districts/districts.module';
 import { ImagesModule } from '../images/images.module';
+import { OpenaiModule } from '../openai/openai.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { ImagesModule } from '../images/images.module';
     ParserModule,
     DistrictsModule,
     ImagesModule,
+    OpenaiModule,
   ],
   providers: [
     HotelsRepository, 
