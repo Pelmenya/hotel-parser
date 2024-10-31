@@ -1,6 +1,7 @@
 import { Hotels } from 'src/modules/hotels/hotels.entity';
 import { Entity, Column, PrimaryGeneratedColumn, Index, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { TDescription } from './abouts.types';
+import { TLanguage } from 'src/types/t-language';
 
 
 @Entity()
@@ -13,6 +14,9 @@ export class Abouts {
 
     @Column("jsonb", { array: true }) // Используем jsonb и указываем, что это массив
     descriptions: TDescription[];
+
+    @Column({ nullable: true })
+    language: TLanguage;
 
     @Index()
     @ManyToOne(() => Hotels, (hotel) => hotel.images, { nullable: true })
