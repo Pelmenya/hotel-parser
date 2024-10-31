@@ -57,6 +57,7 @@ services:
       PROXY_PASSWORD: ${PROXY_PASSWORD_1}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_BASE_API_URL: ${OPENAI_BASE_API_URL}
+      OPENAI_MODEL: ${OPENAI_MODEL}
     working_dir: /app
     command: sh -c "cd /app; rm -rf dist; npm install; npm run start:dev"
     networks:
@@ -90,6 +91,7 @@ services:
       PROXY_PASSWORD: ${PROXY_PASSWORD_2}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_BASE_API_URL: ${OPENAI_BASE_API_URL}
+      OPENAI_MODEL: ${OPENAI_MODEL}
     working_dir: /app
     command: sh -c "cd /app; rm -rf dist; npm install; npm run start:dev"
     networks:
@@ -123,6 +125,7 @@ services:
       PROXY_PASSWORD: ${PROXY_PASSWORD_3}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_BASE_API_URL: ${OPENAI_BASE_API_URL}
+      OPENAI_MODEL: ${OPENAI_MODEL}
     working_dir: /app
     command: sh -c "cd /app; rm -rf dist; npm install; npm run start:dev"
     networks:
@@ -156,6 +159,7 @@ services:
       PROXY_PASSWORD: ${PROXY_PASSWORD_4}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_BASE_API_URL: ${OPENAI_BASE_API_URL}
+      OPENAI_MODEL: ${OPENAI_MODEL}
     working_dir: /app
     command: sh -c "cd /app; rm -rf dist; npm install; npm run start:dev"
     networks:

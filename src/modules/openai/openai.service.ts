@@ -8,6 +8,7 @@ import { setDelay } from 'src/helpers/delay';
 export class OpenAIService {
     private readonly logger = new Logger(OpenAIService.name);
     private openAI: OpenAI;
+    private openAIModel: string;
     constructor(
         private readonly configService: ConfigService
     ) {
@@ -15,6 +16,7 @@ export class OpenAIService {
             apiKey: this.configService.get('OPENAI_API_KEY'),
             baseURL: this.configService.get('OPENAI_BASE_API_URL')
         });
+        this.openAIModel = this.configService.get('OPENAI_MODEL')
     }
 
     async generate(data: TAbout) {
@@ -39,7 +41,7 @@ export class OpenAIService {
                       один для русского, другой для английского.
                       ${JSON.stringify(data)}` 
                 }],
-                model: 'llama-3.1-405b-instruct:free',
+                model: this.openAIModel,
                 temperature: 0.7,
                 max_tokens: 1500,
             });
