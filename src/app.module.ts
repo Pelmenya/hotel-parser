@@ -12,6 +12,8 @@ import { TransportModule } from './modules/transport/transport.module';
 import { ImagesModule } from './modules/images/images.module';
 import { AmenitiesModule } from './modules/amenities/amenities.module';
 import { GeoModule } from './modules/geo/geo.module';
+import { AboutModule } from './modules/about/about.module';
+import { OpenaiModule } from './modules/openai/openai.module';
 
 @Module({
   imports: [
@@ -28,6 +30,8 @@ import { GeoModule } from './modules/geo/geo.module';
     ImagesModule,
     AmenitiesModule,
     GeoModule,
+    AboutModule,
+    OpenaiModule,
   ],
   controllers: [AppController],
   providers: [AppService],

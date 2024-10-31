@@ -183,22 +183,52 @@ export class HotelsService {
             const data = await this.getDataHotelFromJson(hotel.hotel_link_ostrovok.split('/')[5]);
             const $ = cheerio.load(data);
             hotel.name = $('.HotelHeader_name__hWIU0').text().trim();
-
+            const aboutHotelDescriptionTitle = $('.About_about__Q75t5').children('.About_title__Jtfdw').text();
+            const aboutHotelDescriptions = [];
+            $('.About_description__KONG6').map((idx, el) => {
+                const title = $(el).children('.About_descriptionTitle__0r__H').text().trim();
+                const paragraph = $(el).children('.About_descriptionParagraph__PNiNl').text().trim();
+                aboutHotelDescriptions.push({
+                    idx, title, paragraph
+                })
+            }
+            )
+            aboutHotelDescriptions.push({
+                "aboutHotelDescriptionTitle": "Обзор отеля",
+                "aboutHotelDescriptions": [
+                    {
+                        "idx": 0,
+                        "title": "Местоположение",
+                        "paragraph": "Отель «Интурист-Ставрополь» удобно расположен в живописной части центра Ставрополя, что делает его идеальным выбором для деловых и туристических поездок. Отель находится всего в 25 км от аэропорта Ставрополя и в 5 км от железнодорожного вокзала, что обеспечивает удобный доступ к основным транспортным узлам города."
+                    },
+                    {
+                        "idx": 1,
+                        "title": "Услуги и Удобства",
+                        "paragraph": "Отель предлагает своим гостям бесплатный Wi-Fi на всей территории, что обеспечивает постоянный доступ в интернет. Для удобства гостей предусмотрена бесплатная парковка. В ресторане отеля подаются изысканные блюда европейской кухни, которые удовлетворят вкусы самых взыскательных гурманов. Для проведения мероприятий доступны три зала: большой зал, конференц-зал и бизнес-холл, что позволяет организовать мероприятия любого масштаба."
+                    },
+                    {
+                        "idx": 2,
+                        "title": "Характеристики номеров",
+                        "paragraph": "Наш отель предлагает разнообразие категорий номеров, включая стандартные, улучшенные, люкс, полулюкс, апартаменты и номера VIP класса, что позволяет каждому гостю выбрать наиболее подходящий вариант размещения. Номера с балконами предлагают дополнительное пространство для отдыха и наслаждения видом на город."
+                    }
+                ]
+            })
+            
             const main_image_url = replaceResolutionInUrl($('.ScrollGallery_slide__My3l7').first().find('img').attr('src'), '1024x768');
             const additional_image_urls: string[] = $('.ScrollGallery_slide__My3l7').map((idx, el) => {
                 if (idx !== 0)
                     return replaceResolutionInUrl($(el).find('img').attr('src'), '1024x768');
             }).get();
 
-//            await this.imagesService.processAndSaveImages([main_image_url], 'main', hotel.id)
-  //          await this.imagesService.processAndSaveImages(additional_image_urls, 'additional', hotel.id);
+            //            await this.imagesService.processAndSaveImages([main_image_url], 'main', hotel.id)
+            //          await this.imagesService.processAndSaveImages(additional_image_urls, 'additional', hotel.id);
 
             this.logger.log(hotel);
 
             // Сохранение обновленных данных отеля в базу данных
             //    await this.hotelsRepository.save(hotel);
 
-            return hotel;
+            return { hotel, aboutHotelDescriptionTitle, aboutHotelDescriptions };
         }
     }
 
