@@ -12,7 +12,7 @@ import { TransportModule } from './modules/transport/transport.module';
 import { ImagesModule } from './modules/images/images.module';
 import { AmenitiesModule } from './modules/amenities/amenities.module';
 import { GeoModule } from './modules/geo/geo.module';
-import { AboutModule } from './modules/about/about.module';
+import { AboutsModule } from './modules/abouts/abouts.module';
 import { OpenaiModule } from './modules/openai/openai.module';
 
 @Module({
@@ -30,7 +30,7 @@ import { OpenaiModule } from './modules/openai/openai.module';
     ImagesModule,
     AmenitiesModule,
     GeoModule,
-    AboutModule,
+    AboutsModule,
     OpenaiModule,
   ],
   controllers: [AppController],

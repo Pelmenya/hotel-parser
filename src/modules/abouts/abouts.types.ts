@@ -4,7 +4,7 @@ export type TDescription = {
     paragraph: string;
 }
 
-export type TAboutHotel = {
+export type TAbout = {
     aboutHotelDescriptionTitle: string;
     aboutHotelDescriptions: TDescription[];
 }

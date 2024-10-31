@@ -9,7 +9,7 @@ import { ParserService } from '../parser/parser.service';
 import * as cheerio from 'cheerio';
 import { ImagesService } from '../images/images.service';
 import { replaceResolutionInUrl } from 'src/helpers/replace-resolution-in-url';
-import { TAboutHotel } from './hotel.types';
+import { TAbout } from '../abouts/abouts.types';
 import { OpenAIService } from '../openai/openai.service';
 
 
@@ -195,7 +195,7 @@ export class HotelsService {
             }
             )
 
-            const dataDescription: TAboutHotel = {
+            const dataDescription: TAbout = {
                 aboutHotelDescriptionTitle,
                 aboutHotelDescriptions
             } 

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
-import { TAboutHotel } from '../hotels/hotel.types';
+import { TAbout } from '../abouts/abouts.types';
 import { setDelay } from 'src/helpers/delay';
 
 @Injectable()

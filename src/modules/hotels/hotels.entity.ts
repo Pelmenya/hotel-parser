@@ -1,6 +1,7 @@
 import { Entity, Column, PrimaryGeneratedColumn, Index, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { Districts } from '../districts/districts.entity';
 import { Images } from 'src/modules/images/images.entity';
+import { Abouts } from '../abouts/abouts.entity';
 
 @Entity()
 @Index(["hotel_link_ostrovok", "address"], { unique: true })
@@ -27,6 +28,9 @@ export class Hotels {
   @ManyToOne(() => Districts, district => district.hotels, { nullable: true })
   @JoinColumn({ name: 'district_id' })
   district?: Districts;
+
+  @OneToMany(() => Abouts, about => about.hotel, { nullable: true })
+  abouts?: Abouts;
 
   @OneToMany(() => Images, image => image.hotel, { nullable: true })
   images?: Images[];
