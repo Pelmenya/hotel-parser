@@ -17,13 +17,13 @@ export class OpenAIService {
         });
     }
 
-    async generate(data: TAboutHotel) {
+    async generate(data: TAbout) {
         const content = await this.generateHotelDescription(data);
         const parsedData = this.parseResponse(content);
         return { ru: parsedData[0], en: parsedData[1] };
     };
 
-    async generateHotelDescription(data: TAboutHotel, attempt = 1, maxAttempts = 5): Promise<string> {
+    async generateHotelDescription(data: TAbout, attempt = 1, maxAttempts = 5): Promise<string> {
         try {
             const chatCompletion = await this.openAI.chat.completions.create({
                 messages: [{
