@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { AboutsRepository } from './abouts.repository';
 import { TOpenAIDataRes } from '../openai/openai.service';
 import { Abouts } from './abouts.entity';
-import { Hotels } from '../hotels/hotels.entity';
 
 @Injectable()
 export class AboutsService {
@@ -28,7 +27,6 @@ export class AboutsService {
         aboutsEntityEn.hotel = { id } as any;
 
         await this.aboutsRepository.save(aboutsEntityEn);
-
 
     }
 }

@@ -13,6 +13,7 @@ import { TAbout } from '../abouts/abouts.types';
 import { OpenAIService } from '../openai/openai.service';
 import { Abouts } from '../abouts/abouts.entity';
 import { AboutsService } from '../abouts/abouts.service';
+import { Hotels } from './hotels.entity';
 
 
 @Injectable()
@@ -185,68 +186,67 @@ export class HotelsService {
         const hotels = await this.hotelsRepository.findHotelsWithSavePageById(id);
         if (hotels.length) {
             const promises = []
+
             const hotel = hotels[0];
             const data = await this.getDataHotelFromJson(hotel.hotel_link_ostrovok.split('/')[5]);
             const $ = cheerio.load(data);
+
             hotel.name = $('.HotelHeader_name__hWIU0').text().trim();
-            const aboutHotelDescriptionTitle = $('.About_about__Q75t5').children('.About_title__Jtfdw').text();
-            const aboutHotelDescriptions = [];
-            $('.About_description__KONG6').map((idx, el) => {
-                const title = $(el).children('.About_descriptionTitle__0r__H').text().trim();
-                const paragraph = $(el).children('.About_descriptionParagraph__PNiNl').text().trim();
-                aboutHotelDescriptions.push({
-                    idx, title, paragraph
-                })
-            }
-            )
 
-            const dataDescription: TAbout = {
-                aboutHotelDescriptionTitle,
-                aboutHotelDescriptions
-            }
+            promises.push(this.createHotelAboutFromPage($, hotel));
+            promises.push(this.createHotelImagesFromPage($, hotel));
 
-            const openAIData = await this.openAIService.generate(dataDescription);
-
-            await this.aboutsService.saveOpenAIData(openAIData, id);
-
-
-            const main_image_url = replaceResolutionInUrl($('.ScrollGallery_slide__My3l7').first().find('img').attr('src'), '1024x768');
-            const additional_image_urls: string[] = $('.ScrollGallery_slide__My3l7').map((idx, el) => {
-                if (idx !== 0)
-                    return replaceResolutionInUrl($(el).find('img').attr('src'), '1024x768');
-            }).get();
-
-            await this.imagesService.processAndSaveImages([main_image_url], 'main', hotel.id)
-            await this.imagesService.processAndSaveImages(additional_image_urls, 'additional', hotel.id);
-
-            this.logger.log(hotel);
-
+            await Promise.all(promises);
             // Сохранение обновленных данных отеля в базу данных
-             await this.hotelsRepository.save(hotel);
+            this.logger.warn('All part is processed')
+            await this.hotelsRepository.save(hotel);
 
-            return { hotel, openAIData };
+            return { hotel };
         }
     }
 
-    async extractAndStoreAndProcessHotelImagesFromPage(id: string) {
-        const hotels = await this.hotelsRepository.findHotelsWithSavePageById(id);
-        if (hotels.length) {
-            const hotel = hotels[0];
-            const data = await this.getDataHotelFromJson(hotel.hotel_link_ostrovok.split('/')[5]);
-            const $ = cheerio.load(data);
+    async createHotelAboutFromPage(data: cheerio.Root, hotel: Hotels) {
+        const $ = data;
+        const aboutHotelDescriptionTitle = $('.About_about__Q75t5').children('.About_title__Jtfdw').text();
+        const aboutHotelDescriptions = [];
+        $('.About_description__KONG6').map((idx, el) => {
+            const title = $(el).children('.About_descriptionTitle__0r__H').text().trim();
+            const paragraph = $(el).children('.About_descriptionParagraph__PNiNl').text().trim();
+            aboutHotelDescriptions.push({
+                idx, title, paragraph
+            })
+        }
+        )
 
-            const main_image_url = replaceResolutionInUrl($('.ScrollGallery_slide__My3l7').first().find('img').attr('src'), '1024x768');
-            const additional_image_urls: string[] = $('.ScrollGallery_slide__My3l7').map((idx, el) => {
-                if (idx !== 0)
-                    return replaceResolutionInUrl($(el).find('img').attr('src'), '1024x768');
-            }).get();
+        const dataDescription: TAbout = {
+            aboutHotelDescriptionTitle,
+            aboutHotelDescriptions
+        }
 
+        const openAIData = await this.openAIService.generate(dataDescription);
+
+        await this.aboutsService.saveOpenAIData(openAIData, hotel.id);
+    }
+
+    async createHotelImagesFromPage(data: cheerio.Root, hotel: Hotels) {
+        const $ = data;
+        const main_image_url = replaceResolutionInUrl($('.ScrollGallery_slide__My3l7').first().find('img').attr('src'), '1024x768');
+
+        const additional_image_urls: string[] = $('.ScrollGallery_slide__My3l7').map((idx, el) => {
+            if (idx !== 0)
+                return replaceResolutionInUrl($(el).find('img').attr('src'), '1024x768');
+        }).get();
+        
+        if (main_image_url) {
             await this.imagesService.processAndSaveImages([main_image_url], 'main', hotel.id)
-            await this.imagesService.processAndSaveImages(additional_image_urls, 'additional', hotel.id);
-
-
-            return [main_image_url, ...additional_image_urls];
         }
-    }
 
+        if (additional_image_urls.length > 1) {
+            await this.imagesService.processAndSaveImages(additional_image_urls, 'additional', hotel.id);
+        }
+
+        return [main_image_url, ...additional_image_urls];
+    }
 }
+
+
