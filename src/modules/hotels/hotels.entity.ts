@@ -41,6 +41,21 @@ export class Hotels {
   @Column({ default: false })
   page_processed: boolean;
 
+  @Column({ default: false })
+  images_processed: boolean;
+
+  @Column({ default: false })
+  abouts_processed: boolean;
+
+  @Column({ default: false })
+  amenities_processed: boolean;
+
+  @Column({ default: false })
+  geo_processed: boolean;
+
+  @Column({ default: false })
+  policies_processed: boolean;
+
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
 
