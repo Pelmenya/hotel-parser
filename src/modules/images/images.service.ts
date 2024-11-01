@@ -35,7 +35,7 @@ export class ImagesService {
                 image.height = size?.height;
                 image.type = type; //'additional' или 'main' в зависимости от контекста
                 image.hotel = { id: hotelId } as any; // Используем частичное представление объекта отеля
-                image.path = resizedImagePath.replace('/app', '');
+                image.path = resizedImagePath;
                 await this.imagesRepository.save(image);
             }
         }

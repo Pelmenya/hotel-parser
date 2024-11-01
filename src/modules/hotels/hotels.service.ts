@@ -216,13 +216,13 @@ export class HotelsService {
                     return replaceResolutionInUrl($(el).find('img').attr('src'), '1024x768');
             }).get();
 
-            //await this.imagesService.processAndSaveImages([main_image_url], 'main', hotel.id)
-            //await this.imagesService.processAndSaveImages(additional_image_urls, 'additional', hotel.id);
+            await this.imagesService.processAndSaveImages([main_image_url], 'main', hotel.id)
+            await this.imagesService.processAndSaveImages(additional_image_urls, 'additional', hotel.id);
 
             this.logger.log(hotel);
 
             // Сохранение обновленных данных отеля в базу данных
-            // await this.hotelsRepository.save(hotel);
+             await this.hotelsRepository.save(hotel);
 
             return { hotel, openAIData };
         }

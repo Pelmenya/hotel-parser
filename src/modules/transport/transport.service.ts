@@ -10,6 +10,8 @@ export type TTransportLoadContent = 'puppeteer' | 'axios';
 @Injectable()
 export class TransportService {
     private axiosInstance: AxiosInstance;
+    private s3: S3;
+    private bucket: string;
     private proxyUrl: string;
     private proxyUrlPuppeteer: string;
     private proxyUsername: string;
@@ -33,8 +35,18 @@ export class TransportService {
             httpsAgent: socksAgent,
         });
 
+        this.s3 = new S3({
+            accessKeyId: this.configService.get('S3_ACCESS_KEY_ID'),
+            secretAccessKey: this.configService.get('S3_SECRET_ACCESS_KEY'),
+            endpoint: this.configService.get('S3_ENDPOINT'),
+            s3ForcePathStyle: true,
+            region: 'ru-1',
+        });
+
+        this.bucket = this.configService.get('S3_BUCKET'),
+
         this.checkAxiosIP();
-      //  this.checkPuppeteerIP();
+        //this.checkPuppeteerIP();
     }
 
     getAxiosInstance(responseType: 'json' | 'stream' = 'json'): AxiosInstance {
@@ -45,6 +57,13 @@ export class TransportService {
         });
     }
 
+    getS3Instance(): S3 {
+        return this.s3;
+    }
+
+    getBucket(): string {
+        return this.bucket;
+    }
 
     async loadFullPageWithProxy(url: string) {
         const browser = await puppeteer.launch({

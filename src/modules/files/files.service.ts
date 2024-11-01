@@ -6,9 +6,27 @@ import sharp from 'sharp';
 
 @Injectable()
 export class FilesService {
+  private bucketName: string;
+
   constructor(
     private readonly transportService: TransportService
-  ) { }
+  ) {
+    this.bucketName = this.transportService.getBucket(); // замените на ваш
+  }
+
+  async uploadToS3(filePath: string, key: string): Promise<void> {
+    const s3 = this.transportService.getS3Instance();
+    const fileContent = await fsPromises.readFile(filePath);
+
+    const params = {
+      Bucket: this.bucketName,
+      Key: key,
+      Body: fileContent,
+    };
+
+    await s3.upload(params).promise();
+    console.log(`Файл загружен на S3: ${key}`);
+  }
 
   async downloadImage(url: string, folderPath: string, filename: string): Promise<string> {
     if (!filename) {
@@ -16,7 +34,6 @@ export class FilesService {
     }
     const fullFolderPath = join(__dirname, '..', 'uploads', folderPath || '');
 
-    // Создаем каталог, если он не существует
     try {
       await fsPromises.mkdir(fullFolderPath, { recursive: true });
     } catch (error) {
@@ -39,24 +56,28 @@ export class FilesService {
 
   async resizeAndConvertImage(filePath: string, sizes: { width: number; height: number; }[], outputFolderPath: string): Promise<string[]> {
     const convertedImagesPaths: string[] = [];
-
+    const baseOutputFolder = join(__dirname, '..', 'uploads', outputFolderPath);
     try {
       for (const size of sizes) {
         const outputFolder = join(__dirname, '..', 'uploads', outputFolderPath, `${size.width}x${size.height}`);
 
         await fsPromises.mkdir(outputFolder, { recursive: true });
 
-        const outputFilePath = join(outputFolder, filePath.split('/').pop().replace(/\.\w+$/, '.webp'));
+        const outputFileName = filePath.split('/').pop().replace(/\.\w+$/, '.webp');
+        const outputFilePath = join(outputFolder, outputFileName);
         convertedImagesPaths.push(outputFilePath);
 
         await sharp(filePath)
           .resize(size.width, size.height)
           .webp()
           .toFile(outputFilePath);
-      }
 
-      // Удаление исходного файла после обработки
-      await fsPromises.unlink(filePath);
+        const s3Key = join(outputFolder.slice(1),  outputFileName).replace(/\\/g, '/');
+        await this.uploadToS3(outputFilePath, s3Key);
+        await fsPromises.unlink(outputFilePath); // Удаляем локальный файл после загрузки в S3
+      }
+      await fsPromises.unlink(filePath); // Удаление исходного файла после обработки
+      await fsPromises.rm(baseOutputFolder, { recursive: true, force: true });
     } catch (error) {
       console.error('Ошибка при изменении размеров изображения:', error);
     }
