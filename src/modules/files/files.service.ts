@@ -3,6 +3,7 @@ import { createWriteStream, promises as fsPromises, readFile } from 'fs';
 import { join } from 'path';
 import { TransportService } from '../transport/transport.service';
 import sharp from 'sharp';
+import { TSuccess } from 'src/types/t-success';
 
 @Injectable()
 export class FilesService {
@@ -104,7 +105,7 @@ export class FilesService {
     }
   }
 
-  async saveDataToJsonFile(data: any, filename: string, folderPath: string): Promise<{ success: boolean }> {
+  async saveDataToJsonFile(data: any, filename: string, folderPath: string): Promise<TSuccess> {
     const fullFolderPath = join(__dirname, '..', 'uploads', folderPath || '');
 
     // Создаем каталог, если он не существует

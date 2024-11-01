@@ -1,5 +1,6 @@
 import { Controller, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
 import { HotelsService } from './hotels.service';
+import { TSuccess } from 'src/types/t-success';
 
 @Controller('hotels')
 export class HotelsController {
@@ -9,12 +10,12 @@ export class HotelsController {
 
     // читает данные страницы отелей из созданного json файла при парсинге, для дальнейшей обработки или просмотра
     @Get('pages')
-    async getRussianHotelsByPageAndDistrict(@Query() params: { district: string; page: number }): Promise<{ success: boolean }> {
+    async getRussianHotelsByPageAndDistrict(@Query() params: { district: string; page: number }): Promise<TSuccess> {
         return await this.hotelsService.getRussianHotelsByPageAndDistrict(params.district, params.page);
     }
 
     @Get('page')
-    async getRussinHotelBySlug(@Query() params: { slug: string }): Promise<{ success: boolean }> {
+    async getRussinHotelBySlug(@Query() params: { slug: string }): Promise<TSuccess> {
         return await this.hotelsService.getDataHotelFromJson(params.slug);
     }
 

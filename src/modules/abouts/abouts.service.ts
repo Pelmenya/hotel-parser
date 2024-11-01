@@ -9,7 +9,7 @@ export class AboutsService {
         private readonly aboutsRepository: AboutsRepository
     ) { }
 
-    async saveOpenAIData(openAIData: TOpenAIDataRes, id: string) {
+    async saveOpenAIData(openAIData: TOpenAIDataRes, id: string): Promise<{}> {
         const aboutsEntityRu = new Abouts();
 
         aboutsEntityRu.title = openAIData.ru.aboutHotelDescriptionTitle;
@@ -17,7 +17,7 @@ export class AboutsService {
         aboutsEntityRu.descriptions = openAIData.ru.aboutHotelDescriptions;
         aboutsEntityRu.hotel = { id } as any;
 
-        await this.aboutsRepository.save(aboutsEntityRu);
+        const aboutsRu = await this.aboutsRepository.save(aboutsEntityRu);
 
         const aboutsEntityEn = new Abouts();
 
@@ -26,7 +26,13 @@ export class AboutsService {
         aboutsEntityEn.descriptions = openAIData.en.aboutHotelDescriptions;
         aboutsEntityEn.hotel = { id } as any;
 
-        await this.aboutsRepository.save(aboutsEntityEn);
+        const aboutsEn =  await this.aboutsRepository.save(aboutsEntityEn);
+
+        if (aboutsEn.language === 'en' && aboutsRu.language === 'ru') {
+            return { succes : true } 
+        } else {
+            return {succes : false } 
+        }
 
     }
 }

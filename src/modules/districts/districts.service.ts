@@ -4,6 +4,7 @@ import { DistrictsRepository } from './districts.repository';
 import { FilesService } from '../files/files.service';
 import { ParserService } from '../parser/parser.service'; // Импортируем ParserService
 import * as cheerio from 'cheerio';
+import { TSuccess } from 'src/types/t-success';
 
 @Injectable()
 export class DistrictsService {
@@ -223,7 +224,7 @@ export class DistrictsService {
         }
     }
 // методы основных страниц с districts
-    async saveMainPage(page: number) {
+    async saveMainPage(page: number): Promise<TSuccess> {
         const data = await this.parserService.parsePage(`?page=${page}`);
         if (data.error) {
             this.logger.error(`Failed to fetch data for page ${page}:`, data.error);
@@ -232,7 +233,7 @@ export class DistrictsService {
         return data;
     }
 
-    async processSaveMainPagesAll(start: number, end: number) {
+    async processSaveMainPagesAll(start: number, end: number): Promise<TSuccess> {
         for (let i = start; i <= end; i++) {
             try {
                 await this.saveMainPage(i);

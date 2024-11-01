@@ -8,13 +8,13 @@ import { TAmenity } from './amenities.types';
 @Entity()
 @Index(['hotel', 'language'], { unique: true })
 export class Amenities {
-    @PrimaryGeneratedColumn("uuid")
+    @PrimaryGeneratedColumn('uuid')
     id: string;
 
     @Column({ nullable: true })
     title: string;
 
-    @Column("jsonb")
+    @Column('jsonb')
     amenities_list: TAmenity[] = []
 
     @Column({type: String, nullable: true })
