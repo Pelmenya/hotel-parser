@@ -34,7 +34,7 @@ export class Hotels {
   abouts?: Abouts;
 
   @OneToMany(() => Amenities, amenity => amenity.hotel, { nullable: true })
-  amenities?: Abouts;
+  amenities?: Amenities;
 
   @OneToMany(() => Images, image => image.hotel, { nullable: true })
   images?: Images[];

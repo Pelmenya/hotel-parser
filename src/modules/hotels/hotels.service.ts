@@ -11,9 +11,9 @@ import { ImagesService } from '../images/images.service';
 import { replaceResolutionInUrl } from 'src/helpers/replace-resolution-in-url';
 import { TAbout } from '../abouts/abouts.types';
 import { OpenAIService } from '../openai/openai.service';
-import { Abouts } from '../abouts/abouts.entity';
 import { AboutsService } from '../abouts/abouts.service';
 import { Hotels } from './hotels.entity';
+import { AmenitiesService } from '../amenities/amenities.service';
 
 
 @Injectable()
@@ -31,8 +31,7 @@ export class HotelsService {
         private readonly imagesService: ImagesService,
         private readonly openAIService: OpenAIService,
         private readonly aboutsService: AboutsService,
-
-
+        private readonly amenitiesService: AmenitiesService, 
     ) {
         this.instanceId = this.configService.get<number>('INSTANCE_ID');
         this.totalInstances = this.configService.get<number>('TOTAL_INSTANCES');
@@ -193,9 +192,9 @@ export class HotelsService {
 
             hotel.name = $('.HotelHeader_name__hWIU0').text().trim();
 
-            promises.push(this.createHotelAboutFromPage($, hotel));
-            promises.push(this.createHotelImagesFromPage($, hotel));
-
+            //promises.push(this.createHotelAboutFromPage($, hotel));
+            //promises.push(this.createHotelImagesFromPage($, hotel));
+            promises.push(this.createHotelAmenitiesFromPage($, hotel))
             await Promise.all(promises);
             // Сохранение обновленных данных отеля в базу данных
             this.logger.warn('All part is processed')
@@ -230,22 +229,42 @@ export class HotelsService {
 
     async createHotelImagesFromPage(data: cheerio.Root, hotel: Hotels) {
         const $ = data;
-        const main_image_url = replaceResolutionInUrl($('.ScrollGallery_slide__My3l7').first().find('img').attr('src'), '1024x768');
+        const mainImageUrl = replaceResolutionInUrl($('.ScrollGallery_slide__My3l7').first().find('img').attr('src'), '1024x768');
 
-        const additional_image_urls: string[] = $('.ScrollGallery_slide__My3l7').map((idx, el) => {
+        const additionalImageUrls: string[] = $('.ScrollGallery_slide__My3l7').map((idx, el) => {
             if (idx !== 0)
                 return replaceResolutionInUrl($(el).find('img').attr('src'), '1024x768');
         }).get();
         
-        if (main_image_url) {
-            await this.imagesService.processAndSaveImages([main_image_url], 'main', hotel)
+        if (mainImageUrl) {
+            await this.imagesService.processAndSaveImages([mainImageUrl], 'main', hotel)
         }
 
-        if (additional_image_urls.length > 1) {
-            await this.imagesService.processAndSaveImages(additional_image_urls, 'additional', hotel);
+        if (additionalImageUrls.length > 1) {
+            await this.imagesService.processAndSaveImages(additionalImageUrls, 'additional', hotel);
         }
 
-        return [main_image_url, ...additional_image_urls];
+        return [mainImageUrl, ...additionalImageUrls];
+    }
+
+    async createHotelAmenitiesFromPage(data: cheerio.Root, hotel: Hotels) {
+        const $ = data;
+        const mainAmenities = $('.Perks_amenities__RC9_b').children('.Perks_title__I_8U1').text().trim();
+
+        const additionalAmenities: string[] = $('.ScrollGallery_slide__My3l7').map((idx, el) => {
+            if (idx !== 0)
+                return replaceResolutionInUrl($(el).find('img').attr('src'), '1024x768');
+        }).get();
+        
+        if (mainAmenities) {
+            //await this.imagesService.processAndSaveImages([mainAmenities], 'main', hotel)
+        }
+
+        if (additionalAmenities.length > 1) {
+            //await this.imagesService.processAndSaveImages(additionalAmenities, 'additional', hotel);
+        }
+        console.log(mainAmenities)
+        return [mainAmenities, ...additionalAmenities];
     }
 }
 
