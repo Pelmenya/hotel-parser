@@ -5,6 +5,7 @@ import { TLanguage } from 'src/types/t-language';
 
 
 @Entity()
+@Index(['hotel', 'language'], { unique: true })
 export class Abouts {
     @PrimaryGeneratedColumn("uuid")
     id: string;

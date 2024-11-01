@@ -13,9 +13,9 @@ export class ImagesService {
 
     async processAndSaveImages(imageUrls: string[], type: 'main'| 'additional' = 'additional', hotelId: string): Promise<void> {
         const sizes: { width: TImageWidth, height: TImageHeight; name: TImageSize }[] = [
-//            { width: 1024, height: 768, name: 'large' },
+//          { width: 1024, height: 768, name: 'large' },
             { width: 828, height: 560, name: 'medium' },
-            { width: 640, height: 400, name: 'main' },
+//          { width: 640, height: 400, name: 'main' },
             { width: 240, height: 240, name: 'thumbnail' }
 //          { width: 220, height: 220, name: 'small' },
         ];

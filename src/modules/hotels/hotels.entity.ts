@@ -4,7 +4,7 @@ import { Images } from 'src/modules/images/images.entity';
 import { Abouts } from '../abouts/abouts.entity';
 
 @Entity()
-@Index(["hotel_link_ostrovok", "address"], { unique: true })
+@Index(['hotel_link_ostrovok', 'address'], { unique: true })
 export class Hotels {
   @PrimaryGeneratedColumn("uuid")
   id: string;
