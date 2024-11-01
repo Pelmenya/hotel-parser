@@ -2,6 +2,7 @@ import { Entity, Column, PrimaryGeneratedColumn, Index, CreateDateColumn, Update
 import { Districts } from '../districts/districts.entity';
 import { Images } from 'src/modules/images/images.entity';
 import { Abouts } from '../abouts/abouts.entity';
+import { Amenities } from '../amenities/amenities.entity';
 
 @Entity()
 @Index(['hotel_link_ostrovok', 'address'], { unique: true })
@@ -31,6 +32,9 @@ export class Hotels {
 
   @OneToMany(() => Abouts, about => about.hotel, { nullable: true })
   abouts?: Abouts;
+
+  @OneToMany(() => Amenities, amenity => amenity.hotel, { nullable: true })
+  amenities?: Abouts;
 
   @OneToMany(() => Images, image => image.hotel, { nullable: true })
   images?: Images[];

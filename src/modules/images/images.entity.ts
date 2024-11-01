@@ -1,4 +1,5 @@
 import { Hotels } from 'src/modules/hotels/hotels.entity';
+import { TCategory } from 'src/types/t-category';
 import { Entity, Column, PrimaryGeneratedColumn, Index, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 
 export type TImageSize = 'large' | 'medium' | 'main' | 'small' | 'thumbnail';
@@ -25,8 +26,8 @@ export class Images {
     @Column({ nullable: true })
     height: TImageHeight;
 
-    @Column({ nullable: true })
-    type: 'main' | 'additional';
+    @Column({type: String, nullable: true })
+    type: TCategory;
 
     @Index()
     @ManyToOne(() => Hotels, (hotel) => hotel.images, { nullable: true })

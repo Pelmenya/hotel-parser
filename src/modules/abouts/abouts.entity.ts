@@ -7,13 +7,13 @@ import { TLanguage } from 'src/types/t-language';
 @Entity()
 @Index(['hotel', 'language'], { unique: true })
 export class Abouts {
-    @PrimaryGeneratedColumn("uuid")
+    @PrimaryGeneratedColumn('uuid')
     id: string;
 
     @Column({ nullable: true })
     title: string;
 
-    @Column("jsonb") // Используем jsonb и указываем, что это массив
+    @Column('jsonb') // Используем jsonb и указываем, что это массив
     descriptions: TDescription[] = [];
 
     @Column({type: String, nullable: true })

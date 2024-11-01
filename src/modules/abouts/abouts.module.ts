@@ -8,7 +8,13 @@ import { AboutsRepository } from './abouts.repository';
   imports: [
     TypeOrmModule.forFeature([Abouts]),
   ],
-  providers: [AboutsService, AboutsRepository],
-  exports: [AboutsService, AboutsRepository],
+  providers: [
+    AboutsService, 
+    AboutsRepository
+  ],
+  exports: [
+    AboutsService, 
+    AboutsRepository
+  ],
 })
 export class AboutsModule { }
