@@ -238,11 +238,11 @@ export class HotelsService {
         }).get();
         
         if (main_image_url) {
-            await this.imagesService.processAndSaveImages([main_image_url], 'main', hotel.id)
+            await this.imagesService.processAndSaveImages([main_image_url], 'main', hotel)
         }
 
         if (additional_image_urls.length > 1) {
-            await this.imagesService.processAndSaveImages(additional_image_urls, 'additional', hotel.id);
+            await this.imagesService.processAndSaveImages(additional_image_urls, 'additional', hotel);
         }
 
         return [main_image_url, ...additional_image_urls];

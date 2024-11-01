@@ -14,6 +14,9 @@ export class Images {
     name: string;
 
     @Column({ nullable: true })
+    alt: string;
+
+    @Column({ nullable: true })
     size: TImageSize;
 
     @Column({ nullable: true })

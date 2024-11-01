@@ -3,6 +3,7 @@ import { ImagesRepository } from './images.repository';
 import { Images, TImageHeight, TImageSize, TImageWidth } from './images.entity';
 import { v4 as uuidv4 } from 'uuid';
 import { FilesService } from '../files/files.service';
+import { Hotels } from '../hotels/hotels.entity';
 
 @Injectable()
 export class ImagesService {
@@ -11,7 +12,7 @@ export class ImagesService {
         private readonly imagesRepository: ImagesRepository
     ) { }
 
-    async processAndSaveImages(imageUrls: string[], type: 'main'| 'additional' = 'additional', hotelId: string): Promise<void> {
+    async processAndSaveImages(imageUrls: string[], type: 'main'| 'additional' = 'additional', hotel: Hotels): Promise<void> {
         const sizes: { width: TImageWidth, height: TImageHeight; name: TImageSize }[] = [
 //          { width: 1024, height: 768, name: 'large' },
             { width: 828, height: 560, name: 'medium' },
@@ -22,9 +23,9 @@ export class ImagesService {
 
         for (const imageUrl of imageUrls) {
             const fileExtention = imageUrl.split('/').pop().split('.')[1];
-            const imagePath = await this.filesService.downloadImage(imageUrl, `images/hotels/${hotelId}`, `${uuidv4()}.${fileExtention}`);
+            const imagePath = await this.filesService.downloadImage(imageUrl, `images/hotels/${hotel.id}`, `${uuidv4()}.${fileExtention}`);
 
-            const resizedImagePaths = await this.filesService.resizeAndConvertImage(imagePath, sizes, `images/hotels/${hotelId}/resized`);
+            const resizedImagePaths = await this.filesService.resizeAndConvertImage(imagePath, sizes, `images/hotels/${hotel.id}/resized`);
 
             for (const resizedImagePath of resizedImagePaths) {
                 const image = new Images();
@@ -33,8 +34,9 @@ export class ImagesService {
                 image.size = size?.name;
                 image.width = size?.width;
                 image.height = size?.height;
+                image.alt = hotel.name;
                 image.type = type; //'additional' или 'main' в зависимости от контекста
-                image.hotel = { id: hotelId } as any; // Используем частичное представление объекта отеля
+                image.hotel = { id: hotel.id } as any; // Используем частичное представление объекта отеля
                 image.path = resizedImagePath;
                 await this.imagesRepository.save(image);
             }
