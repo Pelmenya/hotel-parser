@@ -1,26 +1,38 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import axios from 'axios';
+import axios, { AxiosInstance } from 'axios';
 import * as fs from 'fs';
 import * as jose from 'node-jose';
 import Bottleneck from 'bottleneck';
+import { Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { TranslationDictionary } from './translation-dictionary.entity';
+import { TransportService } from '../transport/transport.service';
 
 @Injectable()
 export class TranslationService {
+  private axiosInstance: AxiosInstance;
   private limiter = new Bottleneck({
-    reservoir: 20, // Вызовов в секунду
+    reservoir: 20,
     reservoirRefreshAmount: 20,
-    reservoirRefreshInterval: 1000, // 1 секунда
+    reservoirRefreshInterval: 1000,
   });
 
   private symbolsUsed = 0;
   private lastReset = Date.now();
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly transportService: TransportService,
+    @InjectRepository(TranslationDictionary)
+    private readonly translationRepository: Repository<TranslationDictionary>,
+  ) {
+    this.axiosInstance = this.transportService.getAxiosInstance(); 
+  }
 
   private resetSymbolsCounter() {
     const now = Date.now();
-    if (now - this.lastReset >= 3600000) { // 3600000 мс = 1 час
+    if (now - this.lastReset >= 3600000) {
       this.symbolsUsed = 0;
       this.lastReset = now;
     }
@@ -50,6 +62,20 @@ export class TranslationService {
     return response.data.iamToken;
   }
 
+  private async getTranslationFromDictionary(text: string, targetLang: string): Promise<string | null> {
+    const translation = await this.translationRepository.findOne({ where: { original_text: text, language: targetLang } });
+    return translation ? translation.translated_text : null;
+  }
+
+  private async saveTranslationToDictionary(originalText: string, translatedText: string, targetLang: string) {
+    const translation = this.translationRepository.create({
+      original_text: originalText,
+      translated_text: translatedText,
+      language: targetLang,
+    });
+    await this.translationRepository.save(translation);
+  }
+
   public async translateText(text: string, targetLang: string): Promise<string> {
     this.resetSymbolsCounter();
 
@@ -57,11 +83,16 @@ export class TranslationService {
       throw new Error('Превышен лимит символов в час');
     }
 
+    const cachedTranslation = await this.getTranslationFromDictionary(text, targetLang);
+    if (cachedTranslation) {
+      return cachedTranslation;
+    }
+
     return this.limiter.schedule(async () => {
       const iamToken = await this.getIamToken();
       const folderId = this.configService.get<string>('YA_FOLDER_ID');
 
-      const response = await axios.post(
+      const response = await this.axiosInstance.post(
         this.configService.get<string>('TRANSLATE_API_URL'),
         {
           folderId,
@@ -76,10 +107,12 @@ export class TranslationService {
         },
       );
 
+      const translatedText = response.data.translations[0].text;
+      await this.saveTranslationToDictionary(text, translatedText, targetLang);
+
       this.symbolsUsed += text.length;
 
-      return response.data.translations[0].text;
+      return translatedText;
     });
   }
-  
 }
