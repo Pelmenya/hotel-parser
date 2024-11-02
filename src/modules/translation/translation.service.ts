@@ -81,4 +81,5 @@ export class TranslationService {
       return response.data.translations[0].text;
     });
   }
+  
 }
