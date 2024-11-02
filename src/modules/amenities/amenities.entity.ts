@@ -6,7 +6,7 @@ import { TAmenity } from './amenities.types';
 
 
 @Entity()
-@Index(['hotel', 'language'], { unique: true })
+@Index(['hotel', 'language', 'title'], { unique: true })
 export class Amenities {
     @PrimaryGeneratedColumn('uuid')
     id: string;
