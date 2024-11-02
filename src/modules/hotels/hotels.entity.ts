@@ -1,4 +1,14 @@
-import { Entity, Column, PrimaryGeneratedColumn, Index, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
+import { 
+  Entity, 
+  Column, 
+  PrimaryGeneratedColumn, 
+  Index, 
+  CreateDateColumn, 
+  UpdateDateColumn, 
+  ManyToOne, 
+  JoinColumn, 
+  OneToMany 
+} from 'typeorm';
 import { Districts } from '../districts/districts.entity';
 import { Images } from 'src/modules/images/images.entity';
 import { Abouts } from '../abouts/abouts.entity';

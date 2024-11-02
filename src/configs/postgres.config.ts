@@ -6,6 +6,7 @@ import { Countries } from 'src/modules/countries/countries.entity';
 import { Districts } from 'src/modules/districts/districts.entity';
 import { Hotels } from 'src/modules/hotels/hotels.entity';
 import { Images } from 'src/modules/images/images.entity';
+import { TranslationDictionary } from 'src/modules/translation/translation-dictionary.entity';
 
 export const getPostgresConfig = async (
   configService: ConfigService,
@@ -18,6 +19,7 @@ export const getPostgresConfig = async (
     password: configService.get('POSTGRES_PASSWORD'),
     database: configService.get('POSTGRES_DB'),
     entities: [
+      TranslationDictionary,
       Countries, 
       Hotels, 
       Districts,
