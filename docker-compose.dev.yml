@@ -62,6 +62,10 @@ services:
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
       S3_ENDPOINT: ${S3_ENDPOINT}
       S3_BUCKET: ${S3_BUCKET}
+      YA_FOLDER_ID: ${YA_FOLDER_ID}
+      IAM_TOKEN_URL: ${IAM_TOKEN_URL}
+      TRANSLATE_API_URL: ${TRANSLATE_API_URL}
+      KEY_FILE_PATH: ${KEY_FILE_PATH}
     working_dir: /app
     command: sh -c "cd /app; rm -rf dist; npm install; npm run start:dev"
     networks:

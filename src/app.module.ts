@@ -14,6 +14,7 @@ import { AmenitiesModule } from './modules/amenities/amenities.module';
 import { GeoModule } from './modules/geo/geo.module';
 import { AboutsModule } from './modules/abouts/abouts.module';
 import { OpenaiModule } from './modules/openai/openai.module';
+import { TranslationModule } from './modules/translation/translation.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { OpenaiModule } from './modules/openai/openai.module';
     GeoModule,
     AboutsModule,
     OpenaiModule,
+    TranslationModule,
   ],
   controllers: [AppController],
   providers: [AppService],
