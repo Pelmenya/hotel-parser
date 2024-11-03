@@ -11,6 +11,7 @@ import { ImagesModule } from '../images/images.module';
 import { OpenaiModule } from '../openai/openai.module';
 import { AboutsModule } from '../abouts/abouts.module';
 import { AmenitiesModule } from '../amenities/amenities.module';
+import { TranslationModule } from '../translation/translation.module';
 
 @Module({
   imports: [
@@ -21,7 +22,8 @@ import { AmenitiesModule } from '../amenities/amenities.module';
     ImagesModule,
     OpenaiModule,
     AboutsModule,
-    AmenitiesModule
+    AmenitiesModule,
+    TranslationModule
   ],
   providers: [
     HotelsRepository, 

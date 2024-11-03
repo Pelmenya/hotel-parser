@@ -22,8 +22,8 @@ export class AmenitiesRepository {
     await this.amenitiesRepository.delete(id);
   }
   
-  async update(about: Amenities): Promise<Amenities> {
-    return this.amenitiesRepository.save(about);
+  async update(amenity: Amenities): Promise<Amenities> {
+    return this.amenitiesRepository.save(amenity);
   }
   
   // Другие методы для работы с изображениями

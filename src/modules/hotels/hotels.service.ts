@@ -14,6 +14,8 @@ import { OpenAIService } from '../openai/openai.service';
 import { AboutsService } from '../abouts/abouts.service';
 import { Hotels } from './hotels.entity';
 import { AmenitiesService } from '../amenities/amenities.service';
+import { TAmenity } from '../amenities/amenities.types';
+import { TranslationService } from '../translation/translation.service';
 
 
 @Injectable()
@@ -32,6 +34,7 @@ export class HotelsService {
         private readonly openAIService: OpenAIService,
         private readonly aboutsService: AboutsService,
         private readonly amenitiesService: AmenitiesService, 
+        private readonly translationService: TranslationService,
     ) {
         this.instanceId = this.configService.get<number>('INSTANCE_ID');
         this.totalInstances = this.configService.get<number>('TOTAL_INSTANCES');
@@ -249,23 +252,43 @@ export class HotelsService {
 
     async createHotelAmenitiesFromPage(data: cheerio.Root, hotel: Hotels) {
         const $ = data;
-        const mainAmenities = $('.Perks_amenities__RC9_b').children('.Perks_title__I_8U1').text().trim();
+        const mainAmenitiesTitle = $('.Perks_amenities__RC9_b').children('.Perks_title__I_8U1').text().trim();
+        const mainAmenitiesElements:  cheerio.Element[] = [];
+        
+        
+        $('.Perks_amenity__juSfj ').map((idx, el) => {
+            mainAmenitiesElements.push(el)
+        })
+
+        const mainAmenities = await Promise.all(
+            mainAmenitiesElements.map(async (idx, el) => {
+              const amenityText = $(el).text().trim();
+              if (amenityText) {
+                const translatedText = await this.translationService.translateText(amenityText, 'en'); // Переводим на английский
+                return { original: amenityText, translated: translatedText };
+              }
+              return null;
+            }).get()
+          );
+    
 
         const additionalAmenities: string[] = $('.ScrollGallery_slide__My3l7').map((idx, el) => {
-            if (idx !== 0)
-                return replaceResolutionInUrl($(el).find('img').attr('src'), '1024x768');
+            
+                return $(el).find('img').attr('src');
         }).get();
         
-        if (mainAmenities) {
-            //await this.imagesService.processAndSaveImages([mainAmenities], 'main', hotel)
+        if (mainAmenitiesTitle) {
+
+            
         }
 
         if (additionalAmenities.length > 1) {
-            //await this.imagesService.processAndSaveImages(additionalAmenities, 'additional', hotel);
+            
         }
-        console.log(mainAmenities)
-        return [mainAmenities, ...additionalAmenities];
+        console.log(mainAmenitiesTitle)
+        return [mainAmenitiesTitle, ...additionalAmenities];
     }
+
 }
 
 
