@@ -4,6 +4,7 @@ import { TAmenity } from './amenities.types';
 import { TCategory } from 'src/types/t-category';
 import { TTranslateText } from 'src/types/t-translate-text';
 import { Amenities } from './amenities.entity';
+import { Hotels } from '../hotels/hotels.entity';
 
 @Injectable()
 export class AmenitiesService {
@@ -17,41 +18,53 @@ export class AmenitiesService {
     amenitiesData: Array<TTranslateText & { idx: number, paid?: boolean }>,
     type: TCategory) {
 
-    const amenityRu = new Amenities();
-    amenityRu.hotel = { id: hotelId } as any;
-    amenityRu.language = 'ru';
-    amenityRu.title = titles.original;
-    amenityRu.type = type;
-    amenityRu.amenities_list = amenitiesData.map(amenity => {
-      return {
+    // Типизируем объект отеля
+    const hotel: Hotels = { id: hotelId } as Hotels;
+
+    // Проверяем наличие записи для русского языка
+    let amenityRu = await this.amenitiesRepository.findByHotelLanguageAndTitle(
+      hotelId, 
+      'ru', 
+      titles.original
+    );
+
+    // Если такой записи не существует, создаем новую
+    if (!amenityRu) {
+      amenityRu = new Amenities();
+      amenityRu.hotel = hotel;
+      amenityRu.language = 'ru';
+      amenityRu.title = titles.original;
+      amenityRu.type = type;
+      amenityRu.amenities_list = amenitiesData.map(amenity => ({
         idx: amenity.idx,
         name: amenity.original,
         paid: amenity.paid
-      }
+      }));
+      await this.amenitiesRepository.save(amenityRu);
     }
-    );
-    const saveAmenityRu = await this.amenitiesRepository.save(amenityRu);
 
-    const amenityEn = new Amenities();
-    amenityEn.hotel = { id: hotelId } as any;
-    amenityEn.language = 'en';
-    amenityEn.title = titles.translated;
-    amenityEn.type = type;
-    amenityEn.amenities_list = amenitiesData.map(amenity => {
-      return {
+    // Проверяем наличие записи для английского языка
+    let amenityEn = await this.amenitiesRepository.findByHotelLanguageAndTitle(
+      hotelId, 
+      'en', 
+      titles.translated
+    );
+
+    // Если такой записи не существует, создаем новую
+    if (!amenityEn) {
+      amenityEn = new Amenities();
+      amenityEn.hotel = hotel;
+      amenityEn.language = 'en';
+      amenityEn.title = titles.translated;
+      amenityEn.type = type;
+      amenityEn.amenities_list = amenitiesData.map(amenity => ({
         idx: amenity.idx,
         name: amenity.translated,
         paid: amenity.paid
-      }
+      }));
+      await this.amenitiesRepository.save(amenityEn);
     }
-    );
 
-    const saveAmenityEn = await this.amenitiesRepository.save(amenityEn);
-
-    if (saveAmenityEn.language === 'en' && saveAmenityRu.language === 'ru') {
-      return true;
-    } else {
-      return false;
-    }
-  };
+    return amenityEn.language === 'en' && amenityRu.language === 'ru';
+  }
 }
