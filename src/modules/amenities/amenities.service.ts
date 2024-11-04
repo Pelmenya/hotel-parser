@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { AmenitiesRepository } from './amenities.repository';
-import { TAmenity } from './amenities.types';
 import { TCategory } from 'src/types/t-category';
 import { TTranslateText } from 'src/types/t-translate-text';
 import { Amenities } from './amenities.entity';

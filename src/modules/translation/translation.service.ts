@@ -9,14 +9,16 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { TranslationDictionary } from './translation-dictionary.entity';
 import { TransportService } from '../transport/transport.service';
 import { TTranslationName } from './translation.types';
+import { setDelay } from 'src/helpers/delay';
 
 @Injectable()
 export class TranslationService {
   private axiosInstance: AxiosInstance;
   private limiter = new Bottleneck({
-    reservoir: 20,
-    reservoirRefreshAmount: 20,
+    reservoir: 10,  // Уменьшить количество запросов
+    reservoirRefreshAmount: 10,
     reservoirRefreshInterval: 1000,
+    minTime: 100  // Минимальное время между запросами
   });
 
   private symbolsUsed = 0;
@@ -91,30 +93,39 @@ export class TranslationService {
     }
 
     return this.limiter.schedule(async () => {
-      const iamToken = await this.getIamToken();
-      const folderId = this.configService.get<string>('YA_FOLDER_ID');
+      try {
+        const iamToken = await this.getIamToken();
+        const folderId = this.configService.get<string>('YA_FOLDER_ID');
 
-      const response = await this.axiosInstance.post(
-        this.configService.get<string>('TRANSLATE_API_URL'),
-        {
-          folderId,
-          texts: [text],
-          targetLanguageCode: targetLang,
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${iamToken}`,
+        const response = await this.axiosInstance.post(
+          this.configService.get<string>('TRANSLATE_API_URL'),
+          {
+            folderId,
+            texts: [text],
+            targetLanguageCode: targetLang,
           },
-        },
-      );
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${iamToken}`,
+            },
+          },
+        );
 
-      const translatedText = response.data.translations[0].text;
-      await this.saveTranslationToDictionary(name, text, translatedText, targetLang);
+        const translatedText = response.data.translations[0].text;
+        await this.saveTranslationToDictionary(name, text, translatedText, targetLang);
 
-      this.symbolsUsed += text.length;
+        this.symbolsUsed += text.length;
 
-      return translatedText;
+        return translatedText;
+      } catch (error) {
+        if (error.response && error.response.status === 429) {
+          // Применяем экспоненциальную задержку
+          await setDelay(1000);
+          return this.translateText(name, text, targetLang);
+        }
+        throw error;
+      }
     });
   }
 }
