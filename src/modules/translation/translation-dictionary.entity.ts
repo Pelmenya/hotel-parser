@@ -5,6 +5,9 @@ import { Entity, Column, PrimaryGeneratedColumn, Index, CreateDateColumn, Update
 export class TranslationDictionary {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+  
+  @Column({type: String})
+  name: string;
 
   @Column()
   original_text: string;

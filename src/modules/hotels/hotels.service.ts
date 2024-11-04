@@ -16,6 +16,8 @@ import { Hotels } from './hotels.entity';
 import { AmenitiesService } from '../amenities/amenities.service';
 import { TAmenity } from '../amenities/amenities.types';
 import { TranslationService } from '../translation/translation.service';
+import { filterSpaces } from 'src/helpers/filter-spaces';
+import { TTranslateText } from 'src/types/t-translate-text';
 
 
 @Injectable()
@@ -33,7 +35,7 @@ export class HotelsService {
         private readonly imagesService: ImagesService,
         private readonly openAIService: OpenAIService,
         private readonly aboutsService: AboutsService,
-        private readonly amenitiesService: AmenitiesService, 
+        private readonly amenitiesService: AmenitiesService,
         private readonly translationService: TranslationService,
     ) {
         this.instanceId = this.configService.get<number>('INSTANCE_ID');
@@ -238,7 +240,7 @@ export class HotelsService {
             if (idx !== 0)
                 return replaceResolutionInUrl($(el).find('img').attr('src'), '1024x768');
         }).get();
-        
+
         if (mainImageUrl) {
             await this.imagesService.processAndSaveImages([mainImageUrl], 'main', hotel)
         }
@@ -252,41 +254,63 @@ export class HotelsService {
 
     async createHotelAmenitiesFromPage(data: cheerio.Root, hotel: Hotels) {
         const $ = data;
-        const mainAmenitiesTitle = $('.Perks_amenities__RC9_b').children('.Perks_title__I_8U1').text().trim();
-        const mainAmenitiesElements:  cheerio.Element[] = [];
-        
-        
-        $('.Perks_amenity__juSfj ').map((idx, el) => {
-            mainAmenitiesElements.push(el)
-        })
 
-        const mainAmenities = await Promise.all(
+        const mainAmenitiesTitle = filterSpaces(
+            $('.Perks_amenities__RC9_b')
+                .children('.Perks_title__I_8U1')
+                .text()
+                .trim())
+        const mainAmenitiesTitleEn = await this.translationService.translateText('amenity title', mainAmenitiesTitle, 'en')
+
+        const mainTitles: TTranslateText = {
+            original: mainAmenitiesTitle,
+            translated: mainAmenitiesTitleEn
+        }
+
+        const mainAmenitiesElements = $('.Perks_amenity__juSfj ');
+        const mainAmenities: unknown = await Promise.all(
             mainAmenitiesElements.map(async (idx, el) => {
-              const amenityText = $(el).text().trim();
-              if (amenityText) {
-                const translatedText = await this.translationService.translateText(amenityText, 'en'); // Переводим на английский
-                return { original: amenityText, translated: translatedText };
-              }
-              return null;
-            }).get()
-          );
-    
+                const amenityText = filterSpaces($(el).text().trim());
+                if (amenityText) {
+                    const translatedText = await this.translationService.translateText('amenity', amenityText, 'en'); // Переводим на английский
+                    return { idx, original: amenityText, translated: translatedText };
+                }
+                return null;
+            }
+            ));
 
-        const additionalAmenities: string[] = $('.ScrollGallery_slide__My3l7').map((idx, el) => {
-            
-                return $(el).find('img').attr('src');
-        }).get();
-        
-        if (mainAmenitiesTitle) {
+        const mainAmenitiesIsSave = await this.amenitiesService.saveAmenities(hotel.id, mainTitles, mainAmenities as Array<TTranslateText & { idx: number, paid?: boolean }>, 'main')
 
-            
-        }
 
-        if (additionalAmenities.length > 1) {
-            
-        }
-        console.log(mainAmenitiesTitle)
-        return [mainAmenitiesTitle, ...additionalAmenities];
+        const additionalAmenities = [];
+        $('.Amenities_group__X5Qd7').map(async (_, group) => {
+            const additionalAmenitiesTitle = filterSpaces(
+                $(group).children('.Amenities_groupTitle__aDVIi')
+                    .text()
+                    .trim()
+            );
+            const additionalAmenitiesTitleEn = await this.translationService.translateText('amenity title', additionalAmenitiesTitle, 'en')
+
+            const additionalTitles: TTranslateText = {
+                original: additionalAmenitiesTitle,
+                translated: additionalAmenitiesTitleEn
+            }
+
+            const additionalElements = $(group).find('li');
+            const additionalAmenities: unknown = await Promise.all(
+                additionalElements.map(async (idx, amenity) => {
+                    const amenityText = filterSpaces($(amenity).children('.Amenities_amenityName__a_l1_').text().trim());
+                    const paid = $(amenity).children('.Amenities_chargeable__mq3_I').text().trim() ? true : false;
+                    if (amenityText) {
+                        const translatedText = await this.translationService.translateText('amenity', amenityText, 'en'); // Переводим на английский
+                        return { idx, original: amenityText, translated: translatedText, paid };
+                    }
+                    return null;
+                })
+            )
+            await this.amenitiesService.saveAmenities(hotel.id, additionalTitles, additionalAmenities as Array<TTranslateText & { idx: number, paid?: boolean }>, 'additional')
+        })
+        return { success: true };
     }
 
 }

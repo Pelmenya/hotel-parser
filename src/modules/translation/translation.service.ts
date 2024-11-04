@@ -8,6 +8,7 @@ import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { TranslationDictionary } from './translation-dictionary.entity';
 import { TransportService } from '../transport/transport.service';
+import { TTranslationName } from './translation.types';
 
 @Injectable()
 export class TranslationService {
@@ -67,8 +68,9 @@ export class TranslationService {
     return translation ? translation.translated_text : null;
   }
 
-  private async saveTranslationToDictionary(originalText: string, translatedText: string, targetLang: string) {
+  private async saveTranslationToDictionary(name: TTranslationName, originalText: string, translatedText: string, targetLang: string) {
     const translation = this.translationRepository.create({
+      name,
       original_text: originalText,
       translated_text: translatedText,
       language: targetLang,
@@ -76,7 +78,7 @@ export class TranslationService {
     await this.translationRepository.save(translation);
   }
 
-  public async translateText(text: string, targetLang: string): Promise<string> {
+  public async translateText(name: TTranslationName, text: string, targetLang: string): Promise<string> {
     this.resetSymbolsCounter();
 
     if (this.symbolsUsed + text.length > 1_000_000) {
@@ -108,7 +110,7 @@ export class TranslationService {
       );
 
       const translatedText = response.data.translations[0].text;
-      await this.saveTranslationToDictionary(text, translatedText, targetLang);
+      await this.saveTranslationToDictionary(name, text, translatedText, targetLang);
 
       this.symbolsUsed += text.length;
 
