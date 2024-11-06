@@ -64,7 +64,7 @@ export class GeoService {
                 name: geoData.translated,
                 category: geoData.category,
                 distance_from_hotel: geoData.distance_from_hotel,
-                measurement: geoData.measurement,
+                measurement: geoData.measurement === 'км' ? 'km' : geoData.measurement === 'м' ? 'm' : 'm',
             }));
             await this.geoDataRepository.save(geoDataEn);
         }

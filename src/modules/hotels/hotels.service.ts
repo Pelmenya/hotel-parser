@@ -341,23 +341,28 @@ export class HotelsService {
                 const geoCategory = extractGeoCategories($, el)[0];
 
                 const geoName: string = filterSpaces($(el).text().trim().split('•')[0]).trim();
-
                 const geoFromHotel: number = Number(filterSpaces($(el).text().trim().split('•')[1].split(' ')[0]).trim());
                 const measurement: TDistanceMeasurement =
                     filterSpaces($(el).text().trim().split('•')[1].split(' ')[1].trim()) === 'км' ? 'км' : 'м';
-                const measurementEn: TDistanceMeasurement = measurement === 'км' ? 'km' : measurement === 'м' ? 'm' : 'м';
 
 
- 
+
                 if (geoName) {
                     const translatedText = await this.translationService.translateText('geo object', geoName, 'en'); // Переводим на английский
-                    return { idx, original: geoName, translated: translatedText } as TTranslateText;
+                    return { 
+                        idx, 
+                        original: geoName, 
+                        translated: translatedText, 
+                        category: geoCategory, 
+                        measurement, 
+                        distance_from_hotel: geoFromHotel 
+                    } as TTranslateText & Partial<TGeoData>;
                 }
                 return null;
             }
             ));
 
-            console.log(mainGeo)
+        console.log(mainGeo)
 
         const mainGeoIsSave = await this.geoService.saveGeoData(hotel.id, mainTitles, mainGeo as Array<TTranslateText & Partial<TGeoData>>, 'main')
 

@@ -17,10 +17,7 @@ import { TGeoData } from './geo-data.types';
   export class GeoData {
     @PrimaryGeneratedColumn("uuid")
     id: string;
-  
-    @Column()
-    name: string;
-  
+
     @Column({ nullable: true })
     title: string;
 
