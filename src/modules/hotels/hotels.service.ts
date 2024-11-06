@@ -199,6 +199,18 @@ export class HotelsService {
             const $ = cheerio.load(data);
 
             hotel.name = $('.HotelHeader_name__hWIU0').text().trim();
+            hotel.address_page = $('.GeoBlock_address__mcch3').text().trim();
+
+            const ratingText = $('.TotalRating_content__k5u6S').first().text().trim();
+            const rating = ratingText ? parseFloat(ratingText) : -1;
+    
+            // Проверяем, является ли рейтинг числом
+            if (!isNaN(rating)) {
+                hotel.rating = rating;
+            } else {
+                console.error(`Invalid rating value: ${ratingText}`);
+                hotel.rating = -1; // или другое значение по умолчанию
+            }
 
             //promises.push(this.createHotelAboutFromPage($, hotel));
             //promises.push(this.createHotelImagesFromPage($, hotel));
@@ -285,8 +297,6 @@ export class HotelsService {
 
         const mainAmenitiesIsSave = await this.amenitiesService.saveAmenities(hotel.id, mainTitles, mainAmenities as Array<TTranslateText & { idx: number, paid?: boolean }>, 'main')
 
-
-        const additionalAmenities = [];
         $('.Amenities_group__X5Qd7').map(async (_, group) => {
             const additionalAmenitiesTitle = filterSpaces(
                 $(group).children('.Amenities_groupTitle__aDVIi')
@@ -386,7 +396,7 @@ export class HotelsService {
                         const geoDiv = $(geo).children('div');
                         const geoElement = geoDiv.get(0); // Извлечение CheerioElement
                         const geoCategory = extractGeoCategories($, geoElement)[0];
-                        
+
                         const geoName: string = filterSpaces(geoDiv.text().trim().split('•')[0]).trim();
                         const geoFromHotel: number = Number(filterSpaces(geoDiv.text().trim().split('•')[1].split(' ')[0]).trim());
                         const measurement: TDistanceMeasurement =

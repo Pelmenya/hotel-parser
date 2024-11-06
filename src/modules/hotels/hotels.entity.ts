@@ -33,6 +33,9 @@ export class Hotels {
   @Column({ nullable: true })
   address_full?: string;
 
+  @Column({ nullable: true })
+  rating?: number;
+
   @Column({ nullable: true, unique: true })
   hotel_link_ostrovok?: string;
 
