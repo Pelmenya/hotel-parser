@@ -33,7 +33,7 @@ export class Hotels {
   @Column({ nullable: true })
   address_full?: string;
 
-  @Column({ nullable: true })
+  @Column({type: 'float', nullable: true })
   rating?: number;
 
   @Column({ nullable: true, unique: true })

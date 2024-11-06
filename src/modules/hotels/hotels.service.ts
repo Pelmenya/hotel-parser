@@ -202,8 +202,7 @@ export class HotelsService {
             hotel.address_page = $('.GeoBlock_address__mcch3').text().trim();
 
             const ratingText = $('.TotalRating_content__k5u6S').first().text().trim();
-            const rating = ratingText ? parseFloat(ratingText) : -1;
-    
+            const rating = ratingText ? parseFloat(ratingText.replace(',','.')) : -1;
             // Проверяем, является ли рейтинг числом
             if (!isNaN(rating)) {
                 hotel.rating = rating;
