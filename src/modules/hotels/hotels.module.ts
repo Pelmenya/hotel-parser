@@ -12,6 +12,7 @@ import { OpenaiModule } from '../openai/openai.module';
 import { AboutsModule } from '../abouts/abouts.module';
 import { AmenitiesModule } from '../amenities/amenities.module';
 import { TranslationModule } from '../translation/translation.module';
+import { GeoModule } from '../geo/geo.module';
 
 @Module({
   imports: [
@@ -23,7 +24,8 @@ import { TranslationModule } from '../translation/translation.module';
     OpenaiModule,
     AboutsModule,
     AmenitiesModule,
-    TranslationModule
+    TranslationModule,
+    GeoModule
   ],
   providers: [
     HotelsRepository, 

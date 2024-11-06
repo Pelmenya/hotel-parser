@@ -14,10 +14,12 @@ import { OpenAIService } from '../openai/openai.service';
 import { AboutsService } from '../abouts/abouts.service';
 import { Hotels } from './hotels.entity';
 import { AmenitiesService } from '../amenities/amenities.service';
-import { TAmenity } from '../amenities/amenities.types';
 import { TranslationService } from '../translation/translation.service';
 import { filterSpaces } from 'src/helpers/filter-spaces';
 import { TTranslateText } from 'src/types/t-translate-text';
+import { TDistanceMeasurement, TGeoData } from '../geo/geo-data.types';
+import { extractGeoCategories } from 'src/helpers/exract-geo-categories';
+import { GeoService } from '../geo/geo.service';
 
 
 @Injectable()
@@ -37,6 +39,7 @@ export class HotelsService {
         private readonly aboutsService: AboutsService,
         private readonly amenitiesService: AmenitiesService,
         private readonly translationService: TranslationService,
+        private readonly geoService: GeoService,
     ) {
         this.instanceId = this.configService.get<number>('INSTANCE_ID');
         this.totalInstances = this.configService.get<number>('TOTAL_INSTANCES');
@@ -199,7 +202,8 @@ export class HotelsService {
 
             //promises.push(this.createHotelAboutFromPage($, hotel));
             //promises.push(this.createHotelImagesFromPage($, hotel));
-            promises.push(this.createHotelAmenitiesFromPage($, hotel))
+            //promises.push(this.createHotelAmenitiesFromPage($, hotel))
+            promises.push(this.createHotelGeoFromPage($, hotel))
             await Promise.all(promises);
             // Сохранение обновленных данных отеля в базу данных
             this.logger.warn('All part is processed')
@@ -310,6 +314,84 @@ export class HotelsService {
             )
             await this.amenitiesService.saveAmenities(hotel.id, additionalTitles, additionalAmenities as Array<TTranslateText & { idx: number, paid?: boolean }>, 'additional')
         })
+        return { success: true };
+    }
+
+    async createHotelGeoFromPage(data: cheerio.Root, hotel: Hotels) {
+        const $ = data;
+
+        const mainGeoTitle = filterSpaces(
+            $('.Perks_geoblock__GayIf')
+                .children('.Perks_title__I_8U1')
+                .text()
+                .trim())
+        const mainGeoTitleEn = await this.translationService.translateText('geo title', mainGeoTitle, 'en')
+
+        const mainTitles: TTranslateText = {
+            original: mainGeoTitle,
+            translated: mainGeoTitleEn
+        }
+
+        console.log(mainTitles)
+
+        const mainGeoElements = $('.Perks_poi__FKQEN');
+        const mainGeo: unknown = await Promise.all(
+            mainGeoElements.map(async (idx, el) => {
+
+                const geoCategory = extractGeoCategories($, el)[0];
+
+                const geoName: string = filterSpaces($(el).text().trim().split('•')[0]).trim();
+
+                const geoFromHotel: number = Number(filterSpaces($(el).text().trim().split('•')[1].split(' ')[0]).trim());
+                const measurement: TDistanceMeasurement =
+                    filterSpaces($(el).text().trim().split('•')[1].split(' ')[1].trim()) === 'км' ? 'км' : 'м';
+                const measurementEn: TDistanceMeasurement = measurement === 'км' ? 'km' : measurement === 'м' ? 'm' : 'м';
+
+
+ 
+                if (geoName) {
+                    const translatedText = await this.translationService.translateText('geo object', geoName, 'en'); // Переводим на английский
+                    return { idx, original: geoName, translated: translatedText } as TTranslateText;
+                }
+                return null;
+            }
+            ));
+
+            console.log(mainGeo)
+
+        const mainGeoIsSave = await this.geoService.saveGeoData(hotel.id, mainTitles, mainGeo as Array<TTranslateText & Partial<TGeoData>>, 'main')
+
+        /*
+
+        const additionalGeo = [];
+        $('.Geo_group__X5Qd7').map(async (_, group) => {
+            const additionalGeoTitle = filterSpaces(
+                $(group).children('.Geo_groupTitle__aDVIi')
+                    .text()
+                    .trim()
+            );
+            const additionalGeoTitleEn = await this.translationService.translateText('geo title', additionalGeoTitle, 'en')
+
+            const additionalTitles: TTranslateText = {
+                original: additionalGeoTitle,
+                translated: additionalGeoTitleEn
+            }
+
+            const additionalElements = $(group).find('li');
+            const additionalGeo: unknown = await Promise.all(
+                additionalElements.map(async (idx, geo) => {
+                    const geoText = filterSpaces($(geo).children('.Geo_geoName__a_l1_').text().trim());
+                    const paid = $(geo).children('.Geo_chargeable__mq3_I').text().trim() ? true : false;
+                    if (geoText) {
+                        const translatedText = await this.translationService.translateText('geo', geoText, 'en'); // Переводим на английский
+                        return { idx, original: geoText, translated: translatedText, paid };
+                    }
+                    return null;
+                })
+            )
+            await this.amenitiesService.saveGeo(hotel.id, additionalTitles, additionalGeo as Array<TTranslateText & { idx: number, paid?: boolean }>, 'additional')
+        })
+            */
         return { success: true };
     }
 
