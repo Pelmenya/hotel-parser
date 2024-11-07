@@ -5,18 +5,19 @@ import { TransportService } from '../transport/transport.service';
 import sharp from 'sharp';
 import { TSuccess } from 'src/types/t-success';
 
+// Импортируйте необходимые компоненты из AWS SDK v3
+import { PutObjectCommand } from '@aws-sdk/client-s3';
+
 @Injectable()
 export class FilesService {
   private bucketName: string;
 
-  constructor(
-    private readonly transportService: TransportService
-  ) {
-    this.bucketName = this.transportService.getBucket(); // замените на ваш
+  constructor(private readonly transportService: TransportService) {
+    this.bucketName = this.transportService.getBucket();
   }
 
   async uploadToS3(filePath: string, key: string): Promise<void> {
-    const s3 = this.transportService.getS3Instance();
+    const s3Client = this.transportService.getS3Client();
     const fileContent = await fsPromises.readFile(filePath);
 
     const params = {
@@ -25,8 +26,13 @@ export class FilesService {
       Body: fileContent,
     };
 
-    await s3.upload(params).promise();
-    console.log(`Файл загружен на S3: ${key}`);
+    // Используйте Send метод для выполнения команды
+    try {
+      await s3Client.send(new PutObjectCommand(params));
+      console.log(`Файл загружен на S3: ${key}`);
+    } catch (error) {
+      console.error('Ошибка при загрузке файла на S3:', error);
+    }
   }
 
   async downloadImage(url: string, folderPath: string, filename: string): Promise<string> {
@@ -55,7 +61,7 @@ export class FilesService {
     });
   }
 
-  async resizeAndConvertImage(filePath: string, sizes: { width: number; height: number; }[], outputFolderPath: string): Promise<string[]> {
+  async resizeAndConvertImage(filePath: string, sizes: { width: number; height: number }[], outputFolderPath: string): Promise<string[]> {
     const convertedImagesPaths: string[] = [];
     const baseOutputFolder = join(__dirname, '..', 'uploads', outputFolderPath);
     try {
@@ -73,7 +79,7 @@ export class FilesService {
           .webp()
           .toFile(outputFilePath);
 
-        const s3Key = join(outputFolder.slice(1),  outputFileName).replace(/\\/g, '/');
+        const s3Key = join(outputFolder.slice(1), outputFileName).replace(/\\/g, '/');
         await this.uploadToS3(outputFilePath, s3Key);
         await fsPromises.unlink(outputFilePath); // Удаляем локальный файл после загрузки в S3
       }
@@ -85,6 +91,7 @@ export class FilesService {
     return convertedImagesPaths;
   }
 
+  // Остальные методы остаются без изменений
   async saveDataToFile(data: any, filename: string, folderPath: string): Promise<void> {
     const fullFolderPath = join(__dirname, '..', 'uploads', folderPath || '');
 
@@ -107,7 +114,6 @@ export class FilesService {
   async saveDataToJsonFile(data: any, filename: string, folderPath: string): Promise<TSuccess> {
     const fullFolderPath = join(__dirname, '..', 'uploads', folderPath || '');
 
-    // Создаем каталог, если он не существует
     try {
       await fsPromises.mkdir(fullFolderPath, { recursive: true });
     } catch (error) {
@@ -119,10 +125,10 @@ export class FilesService {
     try {
       await fsPromises.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
       console.log(`Данные успешно записаны в ${filePath}`);
-      return { success: true }
+      return { success: true };
     } catch (error) {
       console.error('Ошибка при записи JSON в файл:', error);
-      return { success: false }
+      return { success: false };
     }
   }
 
@@ -143,13 +149,12 @@ export class FilesService {
       });
     });
   }
+
   async readDataFromJsonFile(filename: string, folderPath: string) {
     const fullFolderPath = join(__dirname, '..', 'uploads', folderPath || '');
 
     try {
       const jsonData = await this.readJsonFile(filename, fullFolderPath);
-      // Обработка данных из JSON-файла, например:
-      // console.log(jsonData);
       return jsonData;
     } catch (error) {
       console.error('Ошибка при чтении данных из JSON-файла:', error);
@@ -165,4 +170,14 @@ export class FilesService {
     return this.readDataFromJsonFile(`page_${hotelLink}.json`, `pages/hotels/${hotelLink}`);
   }
 
+  async deleteFile(folderPath: string, filename: string): Promise<void> {
+    const filePath = join(__dirname, '..', 'uploads', folderPath, filename);
+    try {
+      await fsPromises.unlink(filePath);
+      console.log(`Файл удален: ${filePath}`);
+    } catch (error) {
+      console.error(`Ошибка при удалении файла ${filePath}:`, error);
+    }
+  }
+  
 }
