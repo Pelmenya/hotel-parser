@@ -18,6 +18,10 @@ export class ImagesRepository {
     return this.imagesRepository.find({ where: { hotel: { id: hotelId } } });
   }
 
+  async findOneByHotelIdAndOriginalName(hotelId: string, original_name: string): Promise<Images> {
+    return this.imagesRepository.findOne({ where: { hotel: { id: hotelId }, original_name } });
+  }
+  
   async deleteById(id: string): Promise<void> {
     await this.imagesRepository.delete(id);
   }

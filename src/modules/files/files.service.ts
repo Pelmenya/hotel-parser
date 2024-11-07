@@ -78,7 +78,6 @@ export class FilesService {
         await fsPromises.unlink(outputFilePath); // Удаляем локальный файл после загрузки в S3
       }
       await fsPromises.unlink(filePath); // Удаление исходного файла после обработки
-      await fsPromises.rm(baseOutputFolder, { recursive: true, force: true }); // Удаляем всю папку после обработки
     } catch (error) {
       console.error('Ошибка при изменении размеров изображения:', error);
     }

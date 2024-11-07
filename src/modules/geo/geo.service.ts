@@ -5,6 +5,7 @@ import { TCategory } from 'src/types/t-category';
 import { Hotels } from '../hotels/hotels.entity';
 import { GeoData } from './geo-data.entity';
 import { TGeoData } from './geo-data.types';
+import { TSuccess } from 'src/types/t-success';
 
 @Injectable()
 export class GeoService {
@@ -16,7 +17,7 @@ export class GeoService {
         hotelId: string,
         titles: TTranslateText,
         geoDataData: Array<TTranslateText & Partial<TGeoData>>,
-        type: TCategory) {
+        type: TCategory): Promise<TSuccess> {
 
         // Типизируем объект отеля
         const hotel: Hotels = { id: hotelId } as Hotels;
@@ -69,7 +70,7 @@ export class GeoService {
             await this.geoDataRepository.save(geoDataEn);
         }
 
-        return geoDataEn.language === 'en' && geoDataRu.language === 'ru';
+        return { success: geoDataEn.language === 'en' && geoDataRu.language === 'ru' };
     }
 }
 

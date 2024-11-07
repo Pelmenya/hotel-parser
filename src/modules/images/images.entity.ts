@@ -7,12 +7,16 @@ export type TImageWidth = 1024 | 828 | 640 | 220 | 240;
 export type TImageHeight = 768 | 560 | 400 | 220 | 240;
 
 @Entity()
+@Index(['hotel', 'original_name'])
 export class Images {
     @PrimaryGeneratedColumn("uuid")
     id: string;
 
     @Column({ nullable: true })
     name: string;
+
+    @Column({ nullable: true })
+    original_name: string;
 
     @Column({ nullable: true })
     alt: string;
@@ -26,7 +30,7 @@ export class Images {
     @Column({ nullable: true })
     height: TImageHeight;
 
-    @Column({type: String, nullable: true })
+    @Column({ type: String, nullable: true })
     type: TCategory;
 
     @Index()
@@ -34,7 +38,7 @@ export class Images {
     @JoinColumn({ name: 'hotel_id' }) // Явное имя столбца
     hotel?: Hotels;
 
-    @Column({ nullable: true })
+    @Column({ nullable: true, unique: true })
     path: string;
 
     @CreateDateColumn({ type: 'timestamp' }) // Автоматическое заполнение даты создания

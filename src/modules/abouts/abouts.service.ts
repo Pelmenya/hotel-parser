@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { AboutsRepository } from './abouts.repository';
 import { TOpenAIDataRes } from '../openai/openai.service';
 import { Abouts } from './abouts.entity';
+import { TSuccess } from 'src/types/t-success';
 
 @Injectable()
 export class AboutsService {
@@ -9,7 +10,7 @@ export class AboutsService {
         private readonly aboutsRepository: AboutsRepository
     ) { }
 
-    async saveOpenAIData(openAIData: TOpenAIDataRes, id: string): Promise<{}> {
+    async saveOpenAIData(openAIData: TOpenAIDataRes, id: string): Promise<TSuccess> {
 
         let aboutsRu = await this.aboutsRepository.findOneByHotelId(id, 'ru');
         let aboutsEn = await this.aboutsRepository.findOneByHotelId(id, 'en');
@@ -36,11 +37,7 @@ export class AboutsService {
             aboutsEn = await this.aboutsRepository.save(aboutsEntityEn);
         }
 
-        if (aboutsEn.language === 'en' && aboutsRu.language === 'ru') {
-            return { succes: true }
-        } else {
-            return { succes: false }
-        }
+        return { success: aboutsEn.language === 'en' && aboutsRu.language === 'ru' }
     }
 }
 

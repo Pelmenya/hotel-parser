@@ -4,6 +4,7 @@ import { TCategory } from 'src/types/t-category';
 import { TTranslateText } from 'src/types/t-translate-text';
 import { Amenities } from './amenities.entity';
 import { Hotels } from '../hotels/hotels.entity';
+import { TSuccess } from 'src/types/t-success';
 
 @Injectable()
 export class AmenitiesService {
@@ -15,15 +16,15 @@ export class AmenitiesService {
     hotelId: string,
     titles: TTranslateText,
     amenitiesData: Array<TTranslateText & { idx: number, paid?: boolean }>,
-    type: TCategory) {
+    type: TCategory): Promise<TSuccess> {
 
     // Типизируем объект отеля
     const hotel: Hotels = { id: hotelId } as Hotels;
 
     // Проверяем наличие записи для русского языка
     let amenityRu = await this.amenitiesRepository.findByHotelLanguageAndTitle(
-      hotelId, 
-      'ru', 
+      hotelId,
+      'ru',
       titles.original
     );
 
@@ -44,8 +45,8 @@ export class AmenitiesService {
 
     // Проверяем наличие записи для английского языка
     let amenityEn = await this.amenitiesRepository.findByHotelLanguageAndTitle(
-      hotelId, 
-      'en', 
+      hotelId,
+      'en',
       titles.translated
     );
 
@@ -64,6 +65,6 @@ export class AmenitiesService {
       await this.amenitiesRepository.save(amenityEn);
     }
 
-    return amenityEn.language === 'en' && amenityRu.language === 'ru';
+    return { success: amenityEn.language === 'en' && amenityRu.language === 'ru' };
   }
 }
