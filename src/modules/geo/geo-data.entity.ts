@@ -14,6 +14,7 @@ import { Hotels } from '../hotels/hotels.entity';
 import { TGeoData } from './geo-data.types';
   
   @Entity()
+  @Index(['hotel', 'language', 'title'], { unique: true })
   export class GeoData {
     @PrimaryGeneratedColumn("uuid")
     id: string;

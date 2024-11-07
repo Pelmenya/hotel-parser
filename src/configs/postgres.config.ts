@@ -7,6 +7,7 @@ import { Districts } from 'src/modules/districts/districts.entity';
 import { GeoData } from 'src/modules/geo/geo-data.entity';
 import { Hotels } from 'src/modules/hotels/hotels.entity';
 import { Images } from 'src/modules/images/images.entity';
+import { Policies } from 'src/modules/policies/policies.entity';
 import { TranslationDictionary } from 'src/modules/translation/translation-dictionary.entity';
 
 export const getPostgresConfig = async (
@@ -28,6 +29,7 @@ export const getPostgresConfig = async (
       Abouts,
       Amenities,
       GeoData,
+      Policies
     ],
     synchronize: true,
   };

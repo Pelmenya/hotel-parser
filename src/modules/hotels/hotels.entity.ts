@@ -14,6 +14,7 @@ import { Images } from 'src/modules/images/images.entity';
 import { Abouts } from '../abouts/abouts.entity';
 import { Amenities } from '../amenities/amenities.entity';
 import { GeoData } from '../geo/geo-data.entity';
+import { Policies } from '../policies/policies.entity';
 
 @Entity()
 @Index(['hotel_link_ostrovok', 'address'], { unique: true })
@@ -58,6 +59,9 @@ export class Hotels {
 
   @OneToMany(() => GeoData, geo_data => geo_data.hotel, { nullable: true })
   geo_data?: GeoData;
+
+  @OneToMany(() => Policies , policy => policy.hotel, { nullable: true })
+  policies?: Policies;
 
   @OneToMany(() => Images, image => image.hotel, { nullable: true })
   images?: Images[];
