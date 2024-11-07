@@ -29,7 +29,7 @@ export class OpenAIService {
         return { ru: parsedData[0], en: parsedData[1] };
     };
 
-    async generateHotelDescription(data: TAbout, attempt = 1, maxAttempts = 5): Promise<string> {
+    async generateHotelDescription(data: TAbout, attempt = 1, maxAttempts = 10): Promise<string> {
         try {
             const chatCompletion = await this.openAI.chat.completions.create({
                 messages: [{

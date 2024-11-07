@@ -215,10 +215,10 @@ export class HotelsService {
                 hotel.rating = -1; // или другое значение по умолчанию
             }
 
-            //promises.push(this.createHotelAboutFromPage($, hotel));
-            //promises.push(this.createHotelImagesFromPage($, hotel));
-            //promises.push(this.createHotelAmenitiesFromPage($, hotel))
-            //promises.push(this.createHotelGeoFromPage($, hotel))
+            promises.push(this.createHotelAboutFromPage($, hotel));
+            promises.push(this.createHotelImagesFromPage($, hotel));
+            promises.push(this.createHotelAmenitiesFromPage($, hotel))
+            promises.push(this.createHotelGeoFromPage($, hotel))
             promises.push(this.createHotelPoliciesFromPage($, hotel))
             await Promise.all(promises);
             // Сохранение обновленных данных отеля в базу данных
