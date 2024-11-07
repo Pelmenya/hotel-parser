@@ -20,6 +20,8 @@ import { TTranslateText } from 'src/types/t-translate-text';
 import { TDistanceMeasurement, TGeoData } from '../geo/geo-data.types';
 import { extractGeoCategories } from 'src/helpers/exract-geo-categories';
 import { GeoService } from '../geo/geo.service';
+import { TSuccess } from 'src/types/t-success';
+import { PoliciesService } from '../policies/policies.service';
 
 
 @Injectable()
@@ -40,6 +42,8 @@ export class HotelsService {
         private readonly amenitiesService: AmenitiesService,
         private readonly translationService: TranslationService,
         private readonly geoService: GeoService,
+        private readonly policiesService: PoliciesService,
+
     ) {
         this.instanceId = this.configService.get<number>('INSTANCE_ID');
         this.totalInstances = this.configService.get<number>('TOTAL_INSTANCES');
@@ -214,7 +218,8 @@ export class HotelsService {
             //promises.push(this.createHotelAboutFromPage($, hotel));
             //promises.push(this.createHotelImagesFromPage($, hotel));
             //promises.push(this.createHotelAmenitiesFromPage($, hotel))
-            promises.push(this.createHotelGeoFromPage($, hotel))
+            //promises.push(this.createHotelGeoFromPage($, hotel))
+            promises.push(this.createHotelPoliciesFromPage($, hotel))
             await Promise.all(promises);
             // Сохранение обновленных данных отеля в базу данных
             this.logger.warn('All part is processed')
@@ -423,6 +428,52 @@ export class HotelsService {
         return { success: true };
     }
 
+    async createHotelPoliciesFromPage(data: cheerio.Root, hotel: Hotels): Promise<TSuccess> {
+        const $ = data;
+        const hotelPolicies = $('.HotelPolicies_hotelPolicies__rJk_S').get(0);
+        const settlementConditions = $('.Section_wrapper__TMdj2').first();
+        
+        const title =  $(settlementConditions).children('.Section_title__2sPUE').text().trim();
+        if (title === 'Условия заселения') {
+            
+            const titleEn = await this.translationService.translateText('policy title', title, 'en');
+
+            const titles: TTranslateText = {
+                original: title,
+                translated: titleEn,
+            };
+
+            const policyName = $(settlementConditions).find('.PolicyBlock_title__EmLuh').first().text().trim();
+            const policyNameEn = await this.translationService.translateText('policy name', policyName, 'en');
+            
+            const checkIn = $(settlementConditions).find('.PolicyBlock_policyTableCell_checkInCheckOut___KsAn').first().text().trim();
+            const checkInEn = await this.translationService.translateText('policy text',checkIn, 'en');
+            
+            const checkOut = $(settlementConditions).find('.PolicyBlock_policyTableCell_checkInCheckOut___KsAn').last().text().trim();
+            const checkOutEn = await this.translationService.translateText('policy text',checkOut, 'en');
+            
+            return await this.policiesService.savePolicies(
+                hotel.id, 
+                titles, 
+                [
+                    {
+                        idx: 0, 
+                        name:policyName, 
+                        in: checkIn, 
+                        out: checkOut
+                    },
+                    {
+                        idx: 1, 
+                        name:policyNameEn, 
+                        in: checkInEn, 
+                        out: checkOutEn
+                    },
+                ]);
+        } else {
+            return { success: false }
+        }
+    }
+    
 }
 
 

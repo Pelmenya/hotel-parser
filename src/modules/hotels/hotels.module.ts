@@ -13,6 +13,7 @@ import { AboutsModule } from '../abouts/abouts.module';
 import { AmenitiesModule } from '../amenities/amenities.module';
 import { TranslationModule } from '../translation/translation.module';
 import { GeoModule } from '../geo/geo.module';
+import { PoliciesModule } from '../policies/policies.module';
 
 @Module({
   imports: [
@@ -25,7 +26,8 @@ import { GeoModule } from '../geo/geo.module';
     AboutsModule,
     AmenitiesModule,
     TranslationModule,
-    GeoModule
+    GeoModule,  
+    PoliciesModule,
   ],
   providers: [
     HotelsRepository, 

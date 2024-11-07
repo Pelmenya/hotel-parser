@@ -10,6 +10,7 @@ import { TranslationDictionary } from './translation-dictionary.entity';
 import { TransportService } from '../transport/transport.service';
 import { TTranslationName } from './translation.types';
 import { setDelay } from 'src/helpers/delay';
+import { TLanguage } from 'src/types/t-language';
 
 @Injectable()
 export class TranslationService {
@@ -80,7 +81,7 @@ export class TranslationService {
     await this.translationRepository.save(translation);
   }
 
-  public async translateText(name: TTranslationName, text: string, targetLang: string): Promise<string> {
+  public async translateText(name: TTranslationName, text: string, targetLang: TLanguage): Promise<string> {
     this.resetSymbolsCounter();
 
     if (this.symbolsUsed + text.length > 1_000_000) {

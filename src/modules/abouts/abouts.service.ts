@@ -10,29 +10,37 @@ export class AboutsService {
     ) { }
 
     async saveOpenAIData(openAIData: TOpenAIDataRes, id: string): Promise<{}> {
-        const aboutsEntityRu = new Abouts();
 
-        aboutsEntityRu.title = openAIData.ru.aboutHotelDescriptionTitle;
-        aboutsEntityRu.language = 'ru';
-        aboutsEntityRu.descriptions = openAIData.ru.aboutHotelDescriptions;
-        aboutsEntityRu.hotel = { id } as any;
+        let aboutsRu = await this.aboutsRepository.findOneByHotelId(id, 'ru');
+        let aboutsEn = await this.aboutsRepository.findOneByHotelId(id, 'en');
 
-        const aboutsRu = await this.aboutsRepository.save(aboutsEntityRu);
+        if (!aboutsRu) {
+            const aboutsEntityRu = new Abouts();
 
-        const aboutsEntityEn = new Abouts();
+            aboutsEntityRu.title = openAIData.ru.aboutHotelDescriptionTitle;
+            aboutsEntityRu.language = 'ru';
+            aboutsEntityRu.descriptions = openAIData.ru.aboutHotelDescriptions;
+            aboutsEntityRu.hotel = { id } as any;
 
-        aboutsEntityEn.title = openAIData.en.aboutHotelDescriptionTitle;
-        aboutsEntityEn.language = 'en';
-        aboutsEntityEn.descriptions = openAIData.en.aboutHotelDescriptions;
-        aboutsEntityEn.hotel = { id } as any;
-
-        const aboutsEn =  await this.aboutsRepository.save(aboutsEntityEn);
-
-        if (aboutsEn.language === 'en' && aboutsRu.language === 'ru') {
-            return { succes : true } 
-        } else {
-            return {succes : false } 
+            aboutsRu = await this.aboutsRepository.save(aboutsEntityRu);
         }
 
+        if (!aboutsEn) {
+            const aboutsEntityEn = new Abouts();
+
+            aboutsEntityEn.title = openAIData.en.aboutHotelDescriptionTitle;
+            aboutsEntityEn.language = 'en';
+            aboutsEntityEn.descriptions = openAIData.en.aboutHotelDescriptions;
+            aboutsEntityEn.hotel = { id } as any;
+
+            aboutsEn = await this.aboutsRepository.save(aboutsEntityEn);
+        }
+
+        if (aboutsEn.language === 'en' && aboutsRu.language === 'ru') {
+            return { succes: true }
+        } else {
+            return { succes: false }
+        }
     }
 }
+

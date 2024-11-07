@@ -1,6 +1,6 @@
 export type TSettlementConditions = {
     idx: number;
-    title: string;
+    name: string;
     in: string;
     out: string;
 }

@@ -4,6 +4,7 @@ import { Hotels } from '../hotels/hotels.entity';
 import { TSettlementConditions } from './policies.types';
 import { PoliciesRepository } from './policies.repository';
 import { Policies } from './policies.entity';
+import { TSuccess } from 'src/types/t-success';
 
 @Injectable()
 export class PoliciesService {
@@ -14,8 +15,8 @@ export class PoliciesService {
     async savePolicies(
         hotelId: string,
         titles: TTranslateText,
-        policiesData: Array<TTranslateText & TSettlementConditions>,
-    ) {
+        policiesData: Array<TSettlementConditions>,
+    ): Promise<TSuccess> {
 
         // Типизируем объект отеля
         const hotel: Hotels = { id: hotelId } as Hotels;
@@ -35,7 +36,7 @@ export class PoliciesService {
             policiesRu.title = titles.original;
             policiesRu.policy = [{
                 idx: policiesData[0].idx,
-                title: policiesData[0].title,
+                name: policiesData[0].name,
                 in: policiesData[0].in,
                 out: policiesData[0].out
             }];
@@ -54,10 +55,10 @@ export class PoliciesService {
             policiesEn = new Policies();
             policiesEn.hotel = hotel;
             policiesEn.language = 'en';
-            policiesEn.title = titles.original;
+            policiesEn.title = titles.translated;
             policiesEn.policy = [{
                 idx: policiesData[1].idx,
-                title: policiesData[1].title,
+                name: policiesData[1].name,
                 in: policiesData[1].in,
                 out: policiesData[1].out
             }];
@@ -65,7 +66,7 @@ export class PoliciesService {
             await this.policiesRepository.save(policiesEn);
         }
 
-        return policiesEn.language === 'en' && policiesRu.language === 'ru';
+        return { success: policiesEn.language === 'en' && policiesRu.language === 'ru' };
     }
 }
 
