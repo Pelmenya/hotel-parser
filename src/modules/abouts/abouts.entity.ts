@@ -13,7 +13,7 @@ export class Abouts {
     @Column({ nullable: true })
     title: string;
 
-    @Column('jsonb') // Используем jsonb и указываем, что это массив
+    @Column('jsonb', { nullable: true }) // Используем jsonb и указываем, что это массив
     descriptions: TDescription[] = [];
 
     @Column({type: String, nullable: true })
