@@ -163,10 +163,11 @@ export class HotelsService {
     }
 
     async saveHotelsPages() {
-        const hotels = await this.hotelsRepository.findAll();
+        const hotelsAll = await this.hotelsRepository.findAll();
 
-        hotels.sort((a, b) => a.id.localeCompare(b.id));
 
+        const hotels = hotelsAll.sort((a, b) => a.id.localeCompare(b.id)).slice(0, 11);
+        hotels.forEach(item => { console.log(item.id) })
         const pagesToProcess = Array.from({ length: hotels.length }, (_, i) => i + 1)
             .filter(page =>
                 (page - 1) % this.totalInstances === this.instanceId - 1 && hotels[page] &&
@@ -196,186 +197,160 @@ export class HotelsService {
     async extractAndStoreHotelFromPage(id: string) {
         const hotels = await this.hotelsRepository.findHotelsWithSavePageById(id);
         if (hotels.length) {
-            const promises = []
-
             const hotel = hotels[0];
-            const data = await this.getDataHotelFromJson(hotel.hotel_link_ostrovok.split('/')[5]);
+            const hotelLinkPart = hotel.hotel_link_ostrovok.split('/')[5];
+            const data = await this.getDataHotelFromJson(hotelLinkPart);
             const $ = cheerio.load(data);
 
             hotel.name = $('.HotelHeader_name__hWIU0').text().trim();
             hotel.address_page = $('.GeoBlock_address__mcch3').text().trim();
 
             const ratingText = $('.TotalRating_content__k5u6S').first().text().trim();
-            const rating = ratingText ? parseFloat(ratingText.replace(',','.')) : -1;
-            // Проверяем, является ли рейтинг числом
-            if (!isNaN(rating)) {
-                hotel.rating = rating;
-            } else {
-                console.error(`Invalid rating value: ${ratingText}`);
-                hotel.rating = -1; // или другое значение по умолчанию
+            const rating = ratingText ? parseFloat(ratingText.replace(',', '.')) : -1;
+            hotel.rating = !isNaN(rating) ? rating : -1;
+
+            const promises = [
+                this.createHotelAboutFromPage($, hotel),
+                this.createHotelImagesFromPage($, hotel),
+                this.createHotelAmenitiesFromPage($, hotel),
+                this.createHotelGeoFromPage($, hotel),
+                this.createHotelPoliciesFromPage($, hotel)
+            ];
+
+            try {
+                const results = await Promise.all(promises);
+
+                hotel.abouts_processed = results[0].success;
+                hotel.images_processed = results[1].success;
+                hotel.amenities_processed = results[2].success;
+                hotel.geo_processed = results[3].success;
+                hotel.policies_processed = results[4].success;
+
+                this.logger.warn('All parts are processed');
+            } catch (error) {
+                this.logger.error(`Error processing hotel ${hotel.id}:`, error);
             }
 
-            promises.push(this.createHotelAboutFromPage($, hotel));
-            promises.push(this.createHotelImagesFromPage($, hotel));
-            promises.push(this.createHotelAmenitiesFromPage($, hotel))
-            promises.push(this.createHotelGeoFromPage($, hotel))
-            promises.push(this.createHotelPoliciesFromPage($, hotel))
-            await Promise.all(promises);
-            // Сохранение обновленных данных отеля в базу данных
-            this.logger.warn('All part is processed')
+            hotel.page_processed = hotel.abouts_processed &&
+                hotel.images_processed &&
+                hotel.amenities_processed &&
+                hotel.geo_processed &&
+                hotel.policies_processed;
+
             await this.hotelsRepository.save(hotel);
+
+            if (hotel.page_processed) {
+                await this.filesService.deleteFile(`pages/hotels/${hotelLinkPart}`, `page_${hotelLinkPart}.json`);
+            }
 
             return { hotel };
         }
     }
 
-    async createHotelAboutFromPage(data: cheerio.Root, hotel: Hotels) {
+    async createHotelAboutFromPage(data: cheerio.Root, hotel: Hotels): Promise<TSuccess> {
         const $ = data;
         const aboutHotelDescriptionTitle = $('.About_about__Q75t5').children('.About_title__Jtfdw').text();
         const aboutHotelDescriptions = [];
         $('.About_description__KONG6').map((idx, el) => {
             const title = $(el).children('.About_descriptionTitle__0r__H').text().trim();
             const paragraph = $(el).children('.About_descriptionParagraph__PNiNl').text().trim();
-            aboutHotelDescriptions.push({
-                idx, title, paragraph
-            })
-        }
-        )
+            if (title && paragraph) {
+                aboutHotelDescriptions.push({ idx, title, paragraph });
+            }
+        });
 
-        const dataDescription: TAbout = {
-            aboutHotelDescriptionTitle,
-            aboutHotelDescriptions
-        }
-
+        const dataDescription: TAbout = { aboutHotelDescriptionTitle, aboutHotelDescriptions };
         const openAIData = await this.openAIService.generate(dataDescription);
-
-        await this.aboutsService.saveOpenAIData(openAIData, hotel.id);
+        const res = await this.aboutsService.saveOpenAIData(openAIData, hotel.id);
+        return { success: res.success };
     }
 
-    async createHotelImagesFromPage(data: cheerio.Root, hotel: Hotels) {
+    async createHotelImagesFromPage(data: cheerio.Root, hotel: Hotels): Promise<TSuccess> {
         const $ = data;
-        const mainImageUrl = replaceResolutionInUrl($('.ScrollGallery_slide__My3l7').first().find('img').attr('src'), '1024x768');
-
+        const mainImageUrl = replaceResolutionInUrl($('.ScrollGallery_slide__My3l7').first().find('img').attr('src') || '', '1024x768');
         const additionalImageUrls: string[] = $('.ScrollGallery_slide__My3l7').map((idx, el) => {
-            if (idx !== 0)
-                return replaceResolutionInUrl($(el).find('img').attr('src'), '1024x768');
+            if (idx !== 0) return replaceResolutionInUrl($(el).find('img').attr('src') || '', '1024x768');
         }).get();
 
         if (mainImageUrl) {
-            await this.imagesService.processAndSaveImages([mainImageUrl], 'main', hotel)
+            await this.imagesService.processAndSaveImages([mainImageUrl], 'main', hotel);
         }
 
         if (additionalImageUrls.length > 1) {
             await this.imagesService.processAndSaveImages(additionalImageUrls, 'additional', hotel);
         }
 
-        return [mainImageUrl, ...additionalImageUrls];
-    }
-
-    async createHotelAmenitiesFromPage(data: cheerio.Root, hotel: Hotels) {
-        const $ = data;
-
-        const mainAmenitiesTitle = filterSpaces(
-            $('.Perks_amenities__RC9_b')
-                .children('.Perks_title__I_8U1')
-                .text()
-                .trim())
-        const mainAmenitiesTitleEn = await this.translationService.translateText('amenity title', mainAmenitiesTitle, 'en')
-
-        const mainTitles: TTranslateText = {
-            original: mainAmenitiesTitle,
-            translated: mainAmenitiesTitleEn
-        }
-
-        const mainAmenitiesElements = $('.Perks_amenity__juSfj ');
-        const mainAmenities: unknown = await Promise.all(
-            mainAmenitiesElements.map(async (idx, el) => {
-                const amenityText = filterSpaces($(el).text().trim());
-                if (amenityText) {
-                    const translatedText = await this.translationService.translateText('amenity', amenityText, 'en'); // Переводим на английский
-                    return { idx, original: amenityText, translated: translatedText };
-                }
-                return null;
-            }
-            ));
-
-        const mainAmenitiesIsSave = await this.amenitiesService.saveAmenities(hotel.id, mainTitles, mainAmenities as Array<TTranslateText & { idx: number, paid?: boolean }>, 'main')
-
-        $('.Amenities_group__X5Qd7').map(async (_, group) => {
-            const additionalAmenitiesTitle = filterSpaces(
-                $(group).children('.Amenities_groupTitle__aDVIi')
-                    .text()
-                    .trim()
-            );
-            const additionalAmenitiesTitleEn = await this.translationService.translateText('amenity title', additionalAmenitiesTitle, 'en')
-
-            const additionalTitles: TTranslateText = {
-                original: additionalAmenitiesTitle,
-                translated: additionalAmenitiesTitleEn
-            }
-
-            const additionalElements = $(group).find('li');
-            const additionalAmenities: unknown = await Promise.all(
-                additionalElements.map(async (idx, amenity) => {
-                    const amenityText = filterSpaces($(amenity).children('.Amenities_amenityName__a_l1_').text().trim());
-                    const paid = $(amenity).children('.Amenities_chargeable__mq3_I').text().trim() ? true : false;
-                    if (amenityText) {
-                        const translatedText = await this.translationService.translateText('amenity', amenityText, 'en'); // Переводим на английский
-                        return { idx, original: amenityText, translated: translatedText, paid };
-                    }
-                    return null;
-                })
-            )
-            await this.amenitiesService.saveAmenities(hotel.id, additionalTitles, additionalAmenities as Array<TTranslateText & { idx: number, paid?: boolean }>, 'additional')
-        })
         return { success: true };
     }
 
-    async createHotelGeoFromPage(data: cheerio.Root, hotel: Hotels) {
+    async createHotelAmenitiesFromPage(data: cheerio.Root, hotel: Hotels): Promise<TSuccess> {
         const $ = data;
+        const mainAmenitiesTitle = filterSpaces($('.Perks_amenities__RC9_b').children('.Perks_title__I_8U1').text().trim());
+        const mainAmenitiesTitleEn = await this.translationService.translateText('amenity title', mainAmenitiesTitle, 'en');
 
-        // Получение главного геозаголовка
-        const mainGeoTitle = filterSpaces(
-            $('.Perks_geoblock__GayIf')
-                .children('.Perks_title__I_8U1')
-                .text()
-                .trim()
-        );
-        const mainGeoTitleEn = await this.translationService.translateText('geo title', mainGeoTitle, 'en');
-
-        const mainTitles: TTranslateText = {
-            original: mainGeoTitle,
-            translated: mainGeoTitleEn
-        };
-
-        // Обработка главных геоэлементов
-        const mainGeoElements = $('.Perks_poi__FKQEN');
-        const mainGeo: unknown = await Promise.all(
-            mainGeoElements.map(async (idx, geo) => {
-                const geoCategory = extractGeoCategories($, geo)[0];
-                const geoName: string = filterSpaces($(geo).text().trim().split('•')[0]).trim();
-                const geoFromHotel: number = Number(filterSpaces($(geo).text().trim().split('•')[1].split(' ')[0]).trim());
-                const measurement: TDistanceMeasurement =
-                    filterSpaces($(geo).text().trim().split('•')[1].split(' ')[1].trim()) === 'км' ? 'км' : 'м';
-
-                if (geoName) {
-                    const translatedText = await this.translationService.translateText('geo object', geoName, 'en'); // Переводим на английский
-                    return {
-                        idx,
-                        original: geoName,
-                        translated: translatedText,
-                        category: geoCategory,
-                        measurement,
-                        distance_from_hotel: geoFromHotel
-                    } as TTranslateText & Partial<TGeoData>;
+        const mainTitles: TTranslateText = { original: mainAmenitiesTitle, translated: mainAmenitiesTitleEn };
+        const mainAmenitiesElements = $('.Perks_amenity__juSfj');
+        const mainAmenities = await Promise.all(
+            mainAmenitiesElements.map(async (idx, el) => {
+                const amenityText = filterSpaces($(el).text().trim());
+                if (amenityText) {
+                    const translatedText = await this.translationService.translateText('amenity', amenityText, 'en');
+                    return { idx, original: amenityText, translated: translatedText };
                 }
                 return null;
             }).get()
         );
 
-        const mainGeoIsSave = await this.geoService.saveGeoData(hotel.id, mainTitles, mainGeo as Array<TTranslateText & Partial<TGeoData>>, 'main');
+        await this.amenitiesService.saveAmenities(hotel.id, mainTitles, mainAmenities as Array<TTranslateText & { idx: number, paid?: boolean }>, 'main');
 
-        // Обработка дополнительных геоэлементов
+        $('.Amenities_group__X5Qd7').each(async (_, group) => {
+            const additionalAmenitiesTitle = filterSpaces($(group).children('.Amenities_groupTitle__aDVIi').text().trim());
+            const additionalAmenitiesTitleEn = await this.translationService.translateText('amenity title', additionalAmenitiesTitle, 'en');
+
+            const additionalTitles: TTranslateText = { original: additionalAmenitiesTitle, translated: additionalAmenitiesTitleEn };
+            const additionalElements = $(group).find('li');
+            const additionalAmenities = await Promise.all(
+                additionalElements.map(async (idx, amenity) => {
+                    const amenityText = filterSpaces($(amenity).children('.Amenities_amenityName__a_l1_').text().trim());
+                    const paid = $(amenity).children('.Amenities_chargeable__mq3_I').text().trim() ? true : false;
+                    if (amenityText) {
+                        const translatedText = await this.translationService.translateText('amenity', amenityText, 'en');
+                        return { idx, original: amenityText, translated: translatedText, paid };
+                    }
+                    return null;
+                }).get()
+            );
+
+            await this.amenitiesService.saveAmenities(hotel.id, additionalTitles, additionalAmenities as Array<TTranslateText & { idx: number, paid?: boolean }>, 'additional');
+        });
+
+        return { success: true };
+    }
+
+    async createHotelGeoFromPage(data: cheerio.Root, hotel: Hotels): Promise<TSuccess> {
+        const $ = data;
+        const mainGeoTitle = filterSpaces($('.Perks_geoblock__GayIf').children('.Perks_title__I_8U1').text().trim());
+        const mainGeoTitleEn = await this.translationService.translateText('geo title', mainGeoTitle, 'en');
+
+        const mainTitles: TTranslateText = { original: mainGeoTitle, translated: mainGeoTitleEn };
+        const mainGeoElements = $('.Perks_poi__FKQEN');
+        const mainGeo = await Promise.all(
+            mainGeoElements.map(async (idx, geo) => {
+                const geoCategory = extractGeoCategories($, geo)[0];
+                const geoName = filterSpaces($(geo).text().trim().split('•')[0]);
+                const geoFromHotel = Number(filterSpaces($(geo).text().trim().split('•')[1].split(' ')[0]));
+                const measurement: TDistanceMeasurement = filterSpaces($(geo).text().trim().split('•')[1].split(' ')[1].trim()) === 'км' ? 'км' : 'м';
+
+                if (geoName) {
+                    const translatedText = await this.translationService.translateText('geo object', geoName, 'en');
+                    return { idx, original: geoName, translated: translatedText, category: geoCategory, measurement, distance_from_hotel: geoFromHotel };
+                }
+                return null;
+            }).get()
+        );
+
+        await this.geoService.saveGeoData(hotel.id, mainTitles, mainGeo as Array<TTranslateText & Partial<TGeoData>>, 'main');
+
         $('.Pois_list__pY8i4').each(async (_, group) => {
             const subtitles = $(group).find('.Pois_subtitle__rL6_Z');
             const elementsLi = $(group).find('li');
@@ -384,38 +359,23 @@ export class HotelsService {
                 const additionalGeoTitle = filterSpaces($(subtitle).text().trim());
                 const additionalGeoTitleEn = await this.translationService.translateText('geo title', additionalGeoTitle, 'en');
 
-                const additionalTitles: TTranslateText = {
-                    original: additionalGeoTitle,
-                    translated: additionalGeoTitleEn
-                };
-
-                // Определяем начальный и конечный индексы для элементов, относящихся к текущему подзаголовку
+                const additionalTitles: TTranslateText = { original: additionalGeoTitle, translated: additionalGeoTitleEn };
                 const startIdx = $(subtitle).parent().index() + 1;
                 const endIdx = subtitleIdx < subtitles.length - 1 ? $(subtitles[subtitleIdx + 1]).parent().index() : elementsLi.length;
 
                 const additionalElements = elementsLi.slice(startIdx, endIdx);
-
-                const additionalGeo: unknown = await Promise.all(
+                const additionalGeo = await Promise.all(
                     additionalElements.map(async (idx, geo) => {
                         const geoDiv = $(geo).children('div');
-                        const geoElement = geoDiv.get(0); // Извлечение CheerioElement
-                        const geoCategory = extractGeoCategories($, geoElement)[0];
+                        const geoCategory = extractGeoCategories($, geoDiv.get(0))[0];
 
-                        const geoName: string = filterSpaces(geoDiv.text().trim().split('•')[0]).trim();
-                        const geoFromHotel: number = Number(filterSpaces(geoDiv.text().trim().split('•')[1].split(' ')[0]).trim());
-                        const measurement: TDistanceMeasurement =
-                            filterSpaces(geoDiv.text().trim().split('•')[1].split(' ')[1].trim()) === 'км' ? 'км' : 'м';
+                        const geoName = filterSpaces(geoDiv.text().trim().split('•')[0]);
+                        const geoFromHotel = Number(filterSpaces(geoDiv.text().trim().split('•')[1].split(' ')[0]));
+                        const measurement: TDistanceMeasurement = filterSpaces(geoDiv.text().trim().split('•')[1].split(' ')[1].trim()) === 'км' ? 'км' : 'м';
 
                         if (geoName) {
                             const translatedText = await this.translationService.translateText('geo object', geoName, 'en');
-                            return {
-                                idx,
-                                original: geoName,
-                                translated: translatedText,
-                                category: geoCategory,
-                                measurement,
-                                distance_from_hotel: geoFromHotel
-                            } as TTranslateText & Partial<TGeoData>;
+                            return { idx, original: geoName, translated: translatedText, category: geoCategory, measurement, distance_from_hotel: geoFromHotel };
                         }
                         return null;
                     }).get()
@@ -430,50 +390,34 @@ export class HotelsService {
 
     async createHotelPoliciesFromPage(data: cheerio.Root, hotel: Hotels): Promise<TSuccess> {
         const $ = data;
-        const hotelPolicies = $('.HotelPolicies_hotelPolicies__rJk_S').get(0);
         const settlementConditions = $('.Section_wrapper__TMdj2').first();
-        
-        const title =  $(settlementConditions).children('.Section_title__2sPUE').text().trim();
-        if (title === 'Условия заселения') {
-            
-            const titleEn = await this.translationService.translateText('policy title', title, 'en');
 
-            const titles: TTranslateText = {
-                original: title,
-                translated: titleEn,
-            };
+        const title = $(settlementConditions).children('.Section_title__2sPUE').text().trim();
+        if (title === 'Условия заселения') {
+            const titleEn = await this.translationService.translateText('policy title', title, 'en');
+            const titles: TTranslateText = { original: title, translated: titleEn };
 
             const policyName = $(settlementConditions).find('.PolicyBlock_title__EmLuh').first().text().trim();
             const policyNameEn = await this.translationService.translateText('policy name', policyName, 'en');
-            
+
             const checkIn = $(settlementConditions).find('.PolicyBlock_policyTableCell_checkInCheckOut___KsAn').first().text().trim();
-            const checkInEn = await this.translationService.translateText('policy text',checkIn, 'en');
-            
+            const checkInEn = await this.translationService.translateText('policy text', checkIn, 'en');
+
             const checkOut = $(settlementConditions).find('.PolicyBlock_policyTableCell_checkInCheckOut___KsAn').last().text().trim();
-            const checkOutEn = await this.translationService.translateText('policy text',checkOut, 'en');
-            
+            const checkOutEn = await this.translationService.translateText('policy text', checkOut, 'en');
+
             return await this.policiesService.savePolicies(
-                hotel.id, 
-                titles, 
+                hotel.id,
+                titles,
                 [
-                    {
-                        idx: 0, 
-                        name:policyName, 
-                        in: checkIn, 
-                        out: checkOut
-                    },
-                    {
-                        idx: 1, 
-                        name:policyNameEn, 
-                        in: checkInEn, 
-                        out: checkOutEn
-                    },
-                ]);
+                    { idx: 0, name: policyName, in: checkIn, out: checkOut },
+                    { idx: 1, name: policyNameEn, in: checkInEn, out: checkOutEn },
+                ]
+            );
         } else {
-            return { success: false }
+            return { success: false };
         }
     }
-    
 }
 
 
