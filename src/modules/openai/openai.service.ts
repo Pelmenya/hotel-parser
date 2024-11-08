@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 import { TAbout } from '../abouts/abouts.types';
 import { setDelay } from 'src/helpers/delay';
-import { TranslationService } from '../translation/translation.service'; // Импортируем TranslationService
+import { TranslationService } from '../translation/translation.service';
 
 export type TOpenAIDataRes = {
     ru: TAbout;
@@ -18,7 +18,7 @@ export class OpenAIService {
 
     constructor(
         private readonly configService: ConfigService,
-        private readonly translationService: TranslationService // Инъекция TranslationService
+        private readonly translationService: TranslationService
     ) {
         this.openAI = new OpenAI({
             apiKey: this.configService.get('OPENAI_API_KEY'),
@@ -31,19 +31,18 @@ export class OpenAIService {
         try {
             const content = await this.generateHotelDescription(data);
             const parsedData = this.parseResponse(content);
-            if (parsedData.length < 2) {
+            if (parsedData.ru && parsedData.en) {
+                return parsedData;
+            } else {
                 throw new Error('Parsed data does not contain both language responses');
             }
-            return { ru: parsedData[0], en: parsedData[1] };
         } catch (error) {
             this.logger.error('Failed to generate hotel description, using TranslationService:', error);
-            // Используем TranslationService для перевода данных
-            const translatedData = await this.translateFallback(data);
-            return translatedData;
+            return this.translateFallback(data);
         }
     }
 
-    private async generateHotelDescription(data: TAbout, attempt = 1, maxAttempts = 6): Promise<string> {
+    private async generateHotelDescription(data: TAbout, attempt = 1, maxAttempts = 10): Promise<string> {
         try {
             const chatCompletion = await this.openAI.chat.completions.create({
                 messages: [{
@@ -66,7 +65,7 @@ export class OpenAIService {
 
             const content = chatCompletion.choices[0].message.content;
             this.logger.debug('Received content:', content);
-
+            
             if (!this.isValidJsonResponse(content)) {
                 throw new Error('Invalid JSON response');
             }
@@ -77,7 +76,7 @@ export class OpenAIService {
             this.logger.error(`Error in generating hotel description (attempt ${attempt}):`, error);
 
             if (attempt < maxAttempts) {
-                const delay = Math.min(20000, Math.pow(2, attempt - 1) * 1000); // Ограничение до 60 секунд
+                const delay = Math.min(60000, Math.pow(2, attempt - 1) * 1000);
                 this.logger.log(`Retrying in ${delay / 1000} seconds...`);
                 await setDelay(delay);
                 return this.generateHotelDescription(data, attempt + 1, maxAttempts);
@@ -88,20 +87,30 @@ export class OpenAIService {
     }
 
     private isValidJsonResponse(content: string): boolean {
-        try {
-            JSON.parse(content);
-            return true;
-        } catch {
-            return false;
-        }
+        return content.includes('{') && content.includes('}');
     }
 
-    private parseResponse(content: string): TAbout[] {
+    private parseResponse(content: string): TOpenAIDataRes {
         try {
-            return JSON.parse(content);
+            // Используем регулярное выражение для извлечения текстов между тройными кавычками
+            const regex = /```(?:json)?\n([\s\S]*?)\n```/g;
+            const matches = [];
+            let match;
+            while ((match = regex.exec(content)) !== null) {
+                matches.push(match[1].trim());
+            }
+
+            if (matches.length !== 2) {
+                throw new Error('Unexpected number of JSON blocks');
+            }
+
+            const ruData = JSON.parse(matches[0]);
+            const enData = JSON.parse(matches[1]);
+
+            return { ru: ruData, en: enData };
         } catch (error) {
             this.logger.error('Ошибка при парсинге JSON:', error);
-            return [];
+            return { ru: null, en: null };
         }
     }
 

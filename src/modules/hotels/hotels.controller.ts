@@ -36,8 +36,8 @@ export class HotelsController {
     // запускает сохранение страниц отелей  в папке pages/hotels/<hotelLink> на всех серверах
     @Post('pages')
     @HttpCode(200)
-    async saveHotelsPages(): Promise<any> {
-        return await this.hotelsService.saveHotelsPages();
+    async saveHotelsPages(@Query() params: { batch: number }): Promise<any> {
+        return await this.hotelsService.saveHotelsPages(params.batch);
     }
 
     @Post(':id')

@@ -162,17 +162,18 @@ export class HotelsService {
         return data;
     }
 
-    async saveHotelsPages() {
+    async saveHotelsPages(batchSize: number) {
         const hotelsAll = await this.hotelsRepository.findAll();
 
 
-        const hotels = hotelsAll.sort((a, b) => a.id.localeCompare(b.id)).slice(0, 11);
-        hotels.forEach(item => { console.log(item.id) })
+        const hotels = hotelsAll.sort((a, b) => a.id.localeCompare(b.id));
+
         const pagesToProcess = Array.from({ length: hotels.length }, (_, i) => i + 1)
             .filter(page =>
                 (page - 1) % this.totalInstances === this.instanceId - 1 && hotels[page] &&
                 !hotels[page].page_loaded
-            );
+            )
+            .slice(0, batchSize); //пачка для обработки
 
         if (pagesToProcess.length === 0) {
             this.logger.log(`All page for hotels are already loaded.`);
@@ -182,6 +183,7 @@ export class HotelsService {
         for (const page of pagesToProcess) {
             try {
                 await this.saveHotelPage(hotels[page].id, hotels[page].hotel_link_ostrovok)
+                await this.extractAndStoreHotelFromPage(hotels[page].id);
             } catch (error) {
                 this.logger.error(`Error loaded page ${page} of hotel ${hotels[page].hotel_link_ostrovok}:`, error.stack);
             }
@@ -218,6 +220,7 @@ export class HotelsService {
             ];
 
             try {
+                
                 const results = await Promise.all(promises);
 
                 hotel.abouts_processed = results[0].success;
