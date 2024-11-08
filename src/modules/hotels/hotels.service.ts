@@ -249,20 +249,25 @@ export class HotelsService {
 
     async createHotelAboutFromPage(data: cheerio.Root, hotel: Hotels): Promise<TSuccess> {
         const $ = data;
-        const aboutHotelDescriptionTitle = $('.About_about__Q75t5').children('.About_title__Jtfdw').text();
+        const aboutHotelDescriptionTitle = $('.About_about__Q75t5').children('.About_title__Jtfdw').text().trim() || '';
         const aboutHotelDescriptions = [];
-        $('.About_description__KONG6').map((idx, el) => {
-            const title = $(el).children('.About_descriptionTitle__0r__H').text().trim();
-            const paragraph = $(el).children('.About_descriptionParagraph__PNiNl').text().trim();
-            if (title && paragraph) {
-                aboutHotelDescriptions.push({ idx, title, paragraph });
-            }
-        });
 
-        const dataDescription: TAbout = { aboutHotelDescriptionTitle, aboutHotelDescriptions };
-        const openAIData = await this.openAIService.generate(dataDescription);
-        const res = await this.aboutsService.saveOpenAIData(openAIData, hotel.id);
-        return { success: res.success };
+        if (aboutHotelDescriptionTitle || $('.About_description__KONG6').length) {
+            $('.About_description__KONG6').each((idx, el) => {
+                const title = $(el).children('.About_descriptionTitle__0r__H').text().trim();
+                const paragraph = $(el).children('.About_descriptionParagraph__PNiNl').text().trim();
+                if (title && paragraph) {
+                    aboutHotelDescriptions.push({ idx, title, paragraph });
+                }
+            });
+
+            const dataDescription: TAbout = { aboutHotelDescriptionTitle, aboutHotelDescriptions };
+            const openAIData = await this.openAIService.generate(dataDescription);
+            const res = await this.aboutsService.saveOpenAIData(openAIData, hotel.id);
+            return { success: res.success };
+        }
+
+        return { success: true }; // Возвращаем true, если данных нет, чтобы отметить как обработанное
     }
 
     async createHotelImagesFromPage(data: cheerio.Root, hotel: Hotels): Promise<TSuccess> {
@@ -270,129 +275,136 @@ export class HotelsService {
         const mainImageUrl = replaceResolutionInUrl($('.ScrollGallery_slide__My3l7').first().find('img').attr('src') || '', '1024x768');
         const additionalImageUrls: string[] = $('.ScrollGallery_slide__My3l7').map((idx, el) => {
             if (idx !== 0) return replaceResolutionInUrl($(el).find('img').attr('src') || '', '1024x768');
-        }).get();
+        }).get().filter(Boolean);
 
         if (mainImageUrl) {
             await this.imagesService.processAndSaveImages([mainImageUrl], 'main', hotel);
         }
 
-        if (additionalImageUrls.length > 1) {
+        if (additionalImageUrls.length > 0) {
             await this.imagesService.processAndSaveImages(additionalImageUrls, 'additional', hotel);
         }
 
-        return { success: true };
+        return { success: true }; // Отмечаем как обработанное, даже если изображений нет
     }
 
     async createHotelAmenitiesFromPage(data: cheerio.Root, hotel: Hotels): Promise<TSuccess> {
         const $ = data;
-        const mainAmenitiesTitle = filterSpaces($('.Perks_amenities__RC9_b').children('.Perks_title__I_8U1').text().trim());
-        const mainAmenitiesTitleEn = await this.translationService.translateText('amenity title', mainAmenitiesTitle, 'en');
+        const mainAmenitiesTitle = filterSpaces($('.Perks_amenities__RC9_b').children('.Perks_title__I_8U1').text().trim() || '');
+        if (mainAmenitiesTitle) {
+            const mainAmenitiesTitleEn = await this.translationService.translateText('amenity title', mainAmenitiesTitle, 'en');
 
-        const mainTitles: TTranslateText = { original: mainAmenitiesTitle, translated: mainAmenitiesTitleEn };
-        const mainAmenitiesElements = $('.Perks_amenity__juSfj');
-        const mainAmenities = await Promise.all(
-            mainAmenitiesElements.map(async (idx, el) => {
-                const amenityText = filterSpaces($(el).text().trim());
-                if (amenityText) {
-                    const translatedText = await this.translationService.translateText('amenity', amenityText, 'en');
-                    return { idx, original: amenityText, translated: translatedText };
-                }
-                return null;
-            }).get()
-        );
-
-        await this.amenitiesService.saveAmenities(hotel.id, mainTitles, mainAmenities as Array<TTranslateText & { idx: number, paid?: boolean }>, 'main');
-
-        $('.Amenities_group__X5Qd7').each(async (_, group) => {
-            const additionalAmenitiesTitle = filterSpaces($(group).children('.Amenities_groupTitle__aDVIi').text().trim());
-            const additionalAmenitiesTitleEn = await this.translationService.translateText('amenity title', additionalAmenitiesTitle, 'en');
-
-            const additionalTitles: TTranslateText = { original: additionalAmenitiesTitle, translated: additionalAmenitiesTitleEn };
-            const additionalElements = $(group).find('li');
-            const additionalAmenities = await Promise.all(
-                additionalElements.map(async (idx, amenity) => {
-                    const amenityText = filterSpaces($(amenity).children('.Amenities_amenityName__a_l1_').text().trim());
-                    const paid = $(amenity).children('.Amenities_chargeable__mq3_I').text().trim() ? true : false;
+            const mainTitles: TTranslateText = { original: mainAmenitiesTitle, translated: mainAmenitiesTitleEn };
+            const mainAmenitiesElements = $('.Perks_amenity__juSfj');
+            const mainAmenities = await Promise.all(
+                mainAmenitiesElements.map(async (idx, el) => {
+                    const amenityText = filterSpaces($(el).text().trim());
                     if (amenityText) {
                         const translatedText = await this.translationService.translateText('amenity', amenityText, 'en');
-                        return { idx, original: amenityText, translated: translatedText, paid };
+                        return { idx, original: amenityText, translated: translatedText };
                     }
                     return null;
-                }).get()
+                }).get().filter(Boolean)
             );
 
-            await this.amenitiesService.saveAmenities(hotel.id, additionalTitles, additionalAmenities as Array<TTranslateText & { idx: number, paid?: boolean }>, 'additional');
-        });
+            await this.amenitiesService.saveAmenities(hotel.id, mainTitles, mainAmenities as Array<TTranslateText & { idx: number, paid?: boolean }>, 'main');
 
-        return { success: true };
+            $('.Amenities_group__X5Qd7').each(async (_, group) => {
+                const additionalAmenitiesTitle = filterSpaces($(group).children('.Amenities_groupTitle__aDVIi').text().trim() || '');
+                if (additionalAmenitiesTitle) {
+                    const additionalAmenitiesTitleEn = await this.translationService.translateText('amenity title', additionalAmenitiesTitle, 'en');
+
+                    const additionalTitles: TTranslateText = { original: additionalAmenitiesTitle, translated: additionalAmenitiesTitleEn };
+                    const additionalElements = $(group).find('li');
+                    const additionalAmenities = await Promise.all(
+                        additionalElements.map(async (idx, amenity) => {
+                            const amenityText = filterSpaces($(amenity).children('.Amenities_amenityName__a_l1_').text().trim());
+                            const paid = $(amenity).children('.Amenities_chargeable__mq3_I').text().trim() ? true : false;
+                            if (amenityText) {
+                                const translatedText = await this.translationService.translateText('amenity', amenityText, 'en');
+                                return { idx, original: amenityText, translated: translatedText, paid };
+                            }
+                            return null;
+                        }).get().filter(Boolean)
+                    );
+                    await this.amenitiesService.saveAmenities(hotel.id, additionalTitles, additionalAmenities as Array<TTranslateText & { idx: number, paid?: boolean }>, 'additional');
+                }
+            });
+        }
+
+        return { success: true }; // Всегда возвращаем true, чтобы отметить как обработанное
     }
 
     async createHotelGeoFromPage(data: cheerio.Root, hotel: Hotels): Promise<TSuccess> {
         const $ = data;
-        const mainGeoTitle = filterSpaces($('.Perks_geoblock__GayIf').children('.Perks_title__I_8U1').text().trim());
-        const mainGeoTitleEn = await this.translationService.translateText('geo title', mainGeoTitle, 'en');
+        const mainGeoTitle = filterSpaces($('.Perks_geoblock__GayIf').children('.Perks_title__I_8U1').text().trim() || '');
+        if (mainGeoTitle) {
+            const mainGeoTitleEn = await this.translationService.translateText('geo title', mainGeoTitle, 'en');
 
-        const mainTitles: TTranslateText = { original: mainGeoTitle, translated: mainGeoTitleEn };
-        const mainGeoElements = $('.Perks_poi__FKQEN');
-        const mainGeo = await Promise.all(
-            mainGeoElements.map(async (idx, geo) => {
-                const geoCategory = extractGeoCategories($, geo)[0];
-                const geoName = filterSpaces($(geo).text().trim().split('•')[0]);
-                const geoFromHotel = Number(filterSpaces($(geo).text().trim().split('•')[1].split(' ')[0]));
-                const measurement: TDistanceMeasurement = filterSpaces($(geo).text().trim().split('•')[1].split(' ')[1].trim()) === 'км' ? 'км' : 'м';
+            const mainTitles: TTranslateText = { original: mainGeoTitle, translated: mainGeoTitleEn };
+            const mainGeoElements = $('.Perks_poi__FKQEN');
+            const mainGeo = await Promise.all(
+                mainGeoElements.map(async (idx, geo) => {
+                    const geoCategory = extractGeoCategories($, geo)[0];
+                    const geoName = filterSpaces($(geo).text().trim().split('•')[0]);
+                    const geoFromHotel = Number(filterSpaces($(geo).text().trim().split('•')[1].split(' ')[0]));
+                    const measurement: TDistanceMeasurement = filterSpaces($(geo).text().trim().split('•')[1].split(' ')[1].trim()) === 'км' ? 'км' : 'м';
 
-                if (geoName) {
-                    const translatedText = await this.translationService.translateText('geo object', geoName, 'en');
-                    return { idx, original: geoName, translated: translatedText, category: geoCategory, measurement, distance_from_hotel: geoFromHotel };
-                }
-                return null;
-            }).get()
-        );
+                    if (geoName) {
+                        const translatedText = await this.translationService.translateText('geo object', geoName, 'en');
+                        return { idx, original: geoName, translated: translatedText, category: geoCategory, measurement, distance_from_hotel: geoFromHotel };
+                    }
+                    return null;
+                }).get().filter(Boolean)
+            );
 
-        await this.geoService.saveGeoData(hotel.id, mainTitles, mainGeo as Array<TTranslateText & Partial<TGeoData>>, 'main');
+            await this.geoService.saveGeoData(hotel.id, mainTitles, mainGeo as Array<TTranslateText & Partial<TGeoData>>, 'main');
 
-        $('.Pois_list__pY8i4').each(async (_, group) => {
-            const subtitles = $(group).find('.Pois_subtitle__rL6_Z');
-            const elementsLi = $(group).find('li');
+            $('.Pois_list__pY8i4').each(async (_, group) => {
+                const subtitles = $(group).find('.Pois_subtitle__rL6_Z');
+                const elementsLi = $(group).find('li');
 
-            subtitles.each(async (subtitleIdx, subtitle) => {
-                const additionalGeoTitle = filterSpaces($(subtitle).text().trim());
-                const additionalGeoTitleEn = await this.translationService.translateText('geo title', additionalGeoTitle, 'en');
+                subtitles.each(async (subtitleIdx, subtitle) => {
+                    const additionalGeoTitle = filterSpaces($(subtitle).text().trim() || '');
+                    if (additionalGeoTitle) {
+                        const additionalGeoTitleEn = await this.translationService.translateText('geo title', additionalGeoTitle, 'en');
 
-                const additionalTitles: TTranslateText = { original: additionalGeoTitle, translated: additionalGeoTitleEn };
-                const startIdx = $(subtitle).parent().index() + 1;
-                const endIdx = subtitleIdx < subtitles.length - 1 ? $(subtitles[subtitleIdx + 1]).parent().index() : elementsLi.length;
+                        const additionalTitles: TTranslateText = { original: additionalGeoTitle, translated: additionalGeoTitleEn };
+                        const startIdx = $(subtitle).parent().index() + 1;
+                        const endIdx = subtitleIdx < subtitles.length - 1 ? $(subtitles[subtitleIdx + 1]).parent().index() : elementsLi.length;
 
-                const additionalElements = elementsLi.slice(startIdx, endIdx);
-                const additionalGeo = await Promise.all(
-                    additionalElements.map(async (idx, geo) => {
-                        const geoDiv = $(geo).children('div');
-                        const geoCategory = extractGeoCategories($, geoDiv.get(0))[0];
+                        const additionalElements = elementsLi.slice(startIdx, endIdx);
+                        const additionalGeo = await Promise.all(
+                            additionalElements.map(async (idx, geo) => {
+                                const geoDiv = $(geo).children('div');
+                                const geoCategory = extractGeoCategories($, geoDiv.get(0))[0];
 
-                        const geoName = filterSpaces(geoDiv.text().trim().split('•')[0]);
-                        const geoFromHotel = Number(filterSpaces(geoDiv.text().trim().split('•')[1].split(' ')[0]));
-                        const measurement: TDistanceMeasurement = filterSpaces(geoDiv.text().trim().split('•')[1].split(' ')[1].trim()) === 'км' ? 'км' : 'м';
+                                const geoName = filterSpaces(geoDiv.text().trim().split('•')[0]);
+                                const geoFromHotel = Number(filterSpaces(geoDiv.text().trim().split('•')[1].split(' ')[0]));
+                                const measurement: TDistanceMeasurement = filterSpaces(geoDiv.text().trim().split('•')[1].split(' ')[1].trim()) === 'км' ? 'км' : 'м';
 
-                        if (geoName) {
-                            const translatedText = await this.translationService.translateText('geo object', geoName, 'en');
-                            return { idx, original: geoName, translated: translatedText, category: geoCategory, measurement, distance_from_hotel: geoFromHotel };
-                        }
-                        return null;
-                    }).get()
-                );
+                                if (geoName) {
+                                    const translatedText = await this.translationService.translateText('geo object', geoName, 'en');
+                                    return { idx, original: geoName, translated: translatedText, category: geoCategory, measurement, distance_from_hotel: geoFromHotel };
+                                }
+                                return null;
+                            }).get().filter(Boolean)
+                        );
 
-                await this.geoService.saveGeoData(hotel.id, additionalTitles, additionalGeo as Array<TTranslateText & Partial<TGeoData>>, 'additional');
+                        await this.geoService.saveGeoData(hotel.id, additionalTitles, additionalGeo as Array<TTranslateText & Partial<TGeoData>>, 'additional');
+                    }
+                });
             });
-        });
+        }
 
-        return { success: true };
+        return { success: true }; // Отмечаем как обработанное, даже если данных нет
     }
 
     async createHotelPoliciesFromPage(data: cheerio.Root, hotel: Hotels): Promise<TSuccess> {
         const $ = data;
         const settlementConditions = $('.Section_wrapper__TMdj2').first();
+        const title = $(settlementConditions).children('.Section_title__2sPUE').text().trim() || '';
 
-        const title = $(settlementConditions).children('.Section_title__2sPUE').text().trim();
         if (title === 'Условия заселения') {
             const titleEn = await this.translationService.translateText('policy title', title, 'en');
             const titles: TTranslateText = { original: title, translated: titleEn };
@@ -406,17 +418,19 @@ export class HotelsService {
             const checkOut = $(settlementConditions).find('.PolicyBlock_policyTableCell_checkInCheckOut___KsAn').last().text().trim();
             const checkOutEn = await this.translationService.translateText('policy text', checkOut, 'en');
 
-            return await this.policiesService.savePolicies(
-                hotel.id,
-                titles,
-                [
-                    { idx: 0, name: policyName, in: checkIn, out: checkOut },
-                    { idx: 1, name: policyNameEn, in: checkInEn, out: checkOutEn },
-                ]
-            );
-        } else {
-            return { success: false };
+            if (policyName && checkIn && checkOut) {
+                return await this.policiesService.savePolicies(
+                    hotel.id,
+                    titles,
+                    [
+                        { idx: 0, name: policyName, in: checkIn, out: checkOut },
+                        { idx: 1, name: policyNameEn, in: checkInEn, out: checkOutEn },
+                    ]
+                );
+            }
         }
+
+        return { success: true }; // Возвращаем true, если данных нет, чтобы отметить как обработанное
     }
 }
 
