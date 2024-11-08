@@ -119,12 +119,6 @@ export class OpenAIService {
     private async translateFallback(data: TAbout): Promise<TOpenAIDataRes> {
         const ruDescription = {
             ...data,
-            aboutHotelDescriptionTitle: await this.translationService.translateText('description', data.aboutHotelDescriptionTitle, 'ru'),
-            aboutHotelDescriptions: await Promise.all(data.aboutHotelDescriptions.map(async (descr) => ({
-                ...descr,
-                title: await this.translationService.translateText('description', descr.title, 'ru'),
-                paragraph: await this.translationService.translateText('description', descr.paragraph, 'ru')
-            })))
         };
 
         const enDescription = {
