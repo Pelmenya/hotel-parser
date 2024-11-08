@@ -37,7 +37,7 @@ export class OpenAIService {
                 throw new Error('Parsed data does not contain both language responses');
             }
         } catch (error) {
-            this.logger.error('Failed to generate hotel description, using TranslationService:', error);
+            this.logger.error('Failed to generate hotel description, falling back to TranslationService:', error);
             return this.translateFallback(data);
         }
     }
@@ -81,7 +81,9 @@ export class OpenAIService {
                 await setDelay(delay);
                 return this.generateHotelDescription(data, attempt + 1, maxAttempts);
             } else {
-                throw new Error('Failed to generate hotel description after several attempts');
+                this.logger.warn('Max attempts reached. Falling back to translation service.');
+                const fallbackData = await this.translateFallback(data);
+                return JSON.stringify(fallbackData);
             }
         }
     }

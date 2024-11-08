@@ -22,29 +22,37 @@ export class ImagesService {
         ];
 
         for (const imageUrl of imageUrls) {
-            const originalName = imageUrl.split('/').pop().split('.')[0];
-            const fileExtention = imageUrl.split('/').pop().split('.')[1];
+            try {
+                const originalName = imageUrl.split('/').pop().split('.')[0];
+                const fileExtention = imageUrl.split('/').pop().split('.')[1];
 
-            const imageIsExists = await this.imagesRepository.findOneByHotelIdAndOriginalName(hotel.id, originalName);
-            if (!imageIsExists) {
-                const imagePath = await this.filesService.downloadImage(imageUrl, `images/hotels/${hotel.id}`, `${uuidv4()}.${fileExtention}`);
+                const imageIsExists = await this.imagesRepository.findOneByHotelIdAndOriginalName(hotel.id, originalName);
+                if (!imageIsExists) {
+                    const imagePath = await this.filesService.downloadImage(imageUrl, `images/hotels/${hotel.id}`, `${uuidv4()}.${fileExtention}`);
 
-                const resizedImagePaths = await this.filesService.resizeAndConvertImage(imagePath, sizes, `images/hotels/${hotel.id}/resized`);
+                    const resizedImagePaths = await this.filesService.resizeAndConvertImage(imagePath, sizes, `images/hotels/${hotel.id}/resized`);
 
-                for (const resizedImagePath of resizedImagePaths) {
-                    const image = new Images();
-                    image.name = resizedImagePath.split('/').pop();
-                    image.original_name = originalName;
-                    const size = sizes.find(size => resizedImagePath.includes(`${size.width}x${size.height}`));
-                    image.size = size?.name;
-                    image.width = size?.width;
-                    image.height = size?.height;
-                    image.alt = hotel.name;
-                    image.type = type; //'additional' или 'main' в зависимости от контекста
-                    image.hotel = { id: hotel.id } as any; // Используем частичное представление объекта отеля
-                    image.path = resizedImagePath;
-                    await this.imagesRepository.save(image);
+                    for (const resizedImagePath of resizedImagePaths) {
+                        try {
+                            const image = new Images();
+                            image.name = resizedImagePath.split('/').pop();
+                            image.original_name = originalName;
+                            const size = sizes.find(size => resizedImagePath.includes(`${size.width}x${size.height}`));
+                            image.size = size?.name;
+                            image.width = size?.width;
+                            image.height = size?.height;
+                            image.alt = hotel.name;
+                            image.type = type;
+                            image.hotel = { id: hotel.id } as Hotels;
+                            image.path = resizedImagePath;
+                            await this.imagesRepository.save(image);
+                        } catch (error) {
+                            console.error('Ошибка при сохранении изображения в базе данных:', error);
+                        }
+                    }
                 }
+            } catch (error) {
+                console.error('Error processing image:', imageUrl, error);
             }
         }
     }

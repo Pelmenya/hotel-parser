@@ -72,12 +72,25 @@ export class TranslationService {
   }
 
   private async saveTranslationToDictionary(name: TTranslationName, originalText: string, translatedText: string, targetLang: string) {
-    const translation = this.translationRepository.create({
-      name,
-      original_text: originalText,
-      translated_text: translatedText,
-      language: targetLang,
+    let translation = await this.translationRepository.findOne({
+      where: { original_text: originalText, language: targetLang },
     });
+
+    if (translation) {
+      // Обновляем существующую запись
+      translation.name = name;
+      translation.translated_text = translatedText;
+      translation.updated_at = new Date();
+    } else {
+      // Создаем новую запись
+      translation = this.translationRepository.create({
+        name,
+        original_text: originalText,
+        translated_text: translatedText,
+        language: targetLang,
+      });
+    }
+
     await this.translationRepository.save(translation);
   }
 

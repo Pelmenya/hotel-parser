@@ -44,46 +44,68 @@ export class FilesService {
     try {
       await fsPromises.mkdir(fullFolderPath, { recursive: true });
     } catch (error) {
+      console.error('Ошибка при создании каталога:', error);
       throw new Error('Ошибка при создании каталога: ' + error.message);
     }
 
     const path = join(fullFolderPath, filename);
     const writer = createWriteStream(path);
 
-    const axiosInstance = this.transportService.getAxiosInstance('stream');
-    const response = await axiosInstance.get(url);
+    try {
+      const axiosInstance = this.transportService.getAxiosInstance('stream');
+      const response = await axiosInstance.get(url);
+      response.data.pipe(writer);
 
-    response.data.pipe(writer);
-
-    return new Promise((resolve, reject) => {
-      writer.on('finish', () => resolve(path));
-      writer.on('error', reject);
-    });
+      return new Promise((resolve, reject) => {
+        writer.on('finish', () => resolve(path));
+        writer.on('error', (error) => {
+          console.error('Ошибка при записи файла:', error);
+          reject(error);
+        });
+      });
+    } catch (error) {
+      console.error('Ошибка при скачивании изображения:', error);
+      try {
+        await fsPromises.unlink(path); // Удалите файл, если он был частично загружен
+      } catch (unlinkError) {
+        console.error('Ошибка при удалении частично загруженного файла:', unlinkError);
+      }
+      throw new Error('Ошибка при скачивании изображения: ' + error.message);
+    }
   }
 
   async resizeAndConvertImage(filePath: string, sizes: { width: number; height: number }[], outputFolderPath: string): Promise<string[]> {
     const convertedImagesPaths: string[] = [];
-    const baseOutputFolder = join(__dirname, '..', 'uploads', outputFolderPath);
     try {
       for (const size of sizes) {
         const outputFolder = join(__dirname, '..', 'uploads', outputFolderPath, `${size.width}x${size.height}`);
 
-        await fsPromises.mkdir(outputFolder, { recursive: true });
+        try {
+          await fsPromises.mkdir(outputFolder, { recursive: true });
+        } catch (error) {
+          console.error('Ошибка при создании каталога:', error);
+          continue;
+        }
 
         const outputFileName = filePath.split('/').pop().replace(/\.\w+$/, '.webp');
         const outputFilePath = join(outputFolder, outputFileName);
         convertedImagesPaths.push(outputFilePath);
 
-        await sharp(filePath)
-          .resize(size.width, size.height)
-          .webp()
-          .toFile(outputFilePath);
+        try {
+          await sharp(filePath)
+            .resize(size.width, size.height)
+            .webp()
+            .toFile(outputFilePath);
 
-        const s3Key = join(outputFolder.slice(1), outputFileName).replace(/\\/g, '/');
-        await this.uploadToS3(outputFilePath, s3Key);
-        await fsPromises.unlink(outputFilePath); // Удаляем локальный файл после загрузки в S3
+          const s3Key = join(outputFolder.slice(1), outputFileName).replace(/\\/g, '/');
+          await this.uploadToS3(outputFilePath, s3Key);
+          //await fsPromises.unlink(outputFilePath); // Удаляем локальный файл после загрузки в S3
+        } catch (error) {
+          console.error('Ошибка при изменении размеров изображения или загрузке в S3:', error);
+          continue;
+        }
       }
-      await fsPromises.unlink(filePath); // Удаление исходного файла после обработки
+      //await fsPromises.unlink(filePath); // Удаление исходного файла после обработки
     } catch (error) {
       console.error('Ошибка при изменении размеров изображения:', error);
     }
@@ -179,5 +201,5 @@ export class FilesService {
       console.error(`Ошибка при удалении файла ${filePath}:`, error);
     }
   }
-  
+
 }
