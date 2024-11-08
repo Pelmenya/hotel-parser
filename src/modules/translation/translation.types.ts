@@ -6,5 +6,6 @@ export type TTranslationName =
     | 'policy title' 
     | 'policy name'
     | 'policy text'
-    | 'policy';
+    | 'policy'
+    | 'description';
 
