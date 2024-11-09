@@ -28,87 +28,112 @@ export class OpenAIService {
     }
 
     async generate(data: TAbout): Promise<TOpenAIDataRes> {
-        try {
-            const content = await this.generateHotelDescription(data);
-            const parsedData = this.parseResponse(content);
-            if (parsedData.ru && parsedData.en) {
-                return parsedData;
-            } else {
-                throw new Error('Parsed data does not contain both language responses');
-            }
-        } catch (error) {
-            this.logger.error('Failed to generate hotel description, falling back to TranslationService:', error);
-            return this.translateFallback(data);
-        }
-    }
+        let attempt = 0;
+        const maxAttempts = 10;
 
-    private async generateHotelDescription(data: TAbout, attempt = 1, maxAttempts = 10): Promise<string> {
-        try {
-            const chatCompletion = await this.openAI.chat.completions.create({
-                messages: [{
-                    role: 'user',
-                    content: `
-                      Улучшите следующие описания 
-                      отеля для SEO, используя релевантные 
-                      ключевые слова и улучшая структуру текста. 
-                      Верните результат исключительно в формате JSON, 
-                      без дополнительного текста, 
-                      на русском и английском языках. 
-                      Данные должны быть структурированы в два отдельных JSON-блока: 
-                      один для русского, другой для английского.
-                      ${JSON.stringify(data)}`
-                }],
-                model: this.openAIModel,
-                temperature: 0.7,
-                max_tokens: 1500,
-            });
+        while (attempt < maxAttempts) {
+            try {
+                const content = await this.generateHotelDescription(data);
+                const parsedData = this.parseResponse(content);
 
-            const content = chatCompletion.choices[0].message.content;
-            this.logger.debug('Received content:', content);
-            
-            if (!this.isValidJsonResponse(content)) {
-                throw new Error('Invalid JSON response');
-            }
-
-            return content;
-
-        } catch (error) {
-            this.logger.error(`Error in generating hotel description (attempt ${attempt}):`, error);
-
-            if (attempt < maxAttempts) {
+                if (parsedData.ru && parsedData.en) {
+                    return parsedData;
+                } else {
+                    throw new Error('Parsed data does not contain both language responses');
+                }
+            } catch (error) {
+                this.logger.error('Failed to generate hotel description, retrying:', error);
+                attempt++;
+                if (attempt >= maxAttempts) {
+                    this.logger.error('Max attempts reached, falling back to TranslationService');
+                    return this.translateFallback(data);
+                }
                 const delay = Math.min(60000, Math.pow(2, attempt - 1) * 1000);
                 this.logger.log(`Retrying in ${delay / 1000} seconds...`);
                 await setDelay(delay);
-                return this.generateHotelDescription(data, attempt + 1, maxAttempts);
-            } else {
-                this.logger.warn('Max attempts reached. Falling back to translation service.');
-                const fallbackData = await this.translateFallback(data);
-                return JSON.stringify(fallbackData);
             }
         }
     }
 
-    private isValidJsonResponse(content: string): boolean {
-        return content.includes('{') && content.includes('}');
+    private async generateHotelDescription(data: TAbout): Promise<string> {
+        const chatCompletion = await this.openAI.chat.completions.create({
+            messages: [{
+                role: 'user',
+                content: `
+                    Улучшите следующие описания отеля для SEO, используя релевантные ключевые слова и улучшая структуру текста.
+                    Верните результат исключительно в формате JSON, без дополнительного текста, на русском и английском языках.
+                    Данные должны быть структурированы в два отдельных JSON-блока: один для русского, другой для английского.
+
+                    Пример правильного формата ответа:
+                    **Русский язык**
+                    \`\`\`json
+                    {
+                      "aboutHotelDescriptionTitle": "Уютные апартаменты в центре города",
+                      "aboutHotelDescriptions": [
+                        {
+                          "idx": 0,
+                          "title": "Расположение",
+                          "paragraph": "Апартаменты расположены в самом сердце города, в шаговой доступности от главных достопримечательностей."
+                        }
+                      ]
+                    }
+                    \`\`\`
+
+                    **Английский язык**
+                    \`\`\`json
+                    {
+                      "aboutHotelDescriptionTitle": "Cozy apartments in the city center",
+                      "aboutHotelDescriptions": [
+                        {
+                          "idx": 0,
+                          "title": "Location",
+                          "paragraph": "The apartments are located in the heart of the city, within walking distance of major attractions."
+                        }
+                      ]
+                    }
+                    \`\`\`
+
+                    Пример неправильного формата ответа (не используйте этот формат):
+                    Текстовый ответ или ответ не в формате JSON.
+                    `
+            }],
+            model: this.openAIModel,
+            temperature: 0.7,
+            max_tokens: 1500,
+        });
+
+        const content = chatCompletion.choices[0].message.content;
+        this.logger.debug('Received content:', content);
+
+        return content;
     }
 
     private parseResponse(content: string): TOpenAIDataRes {
         try {
-            // Используем регулярное выражение для извлечения текстов между тройными кавычками
-            const regex = /```(?:json)?\n([\s\S]*?)\n```/g;
+            // Попробуем извлечь JSON-блоки с помощью двух подходов: с кавычками и без них
             const matches = [];
+            const regexWithQuotes = /```(?:json)?\n([\s\S]*?)\n```/g;
             let match;
-            while ((match = regex.exec(content)) !== null) {
+            while ((match = regexWithQuotes.exec(content)) !== null) {
                 matches.push(match[1].trim());
             }
-
+    
+            // Если не нашли блоков с кавычками, пробуем найти просто JSON-объекты
+            if (matches.length < 2) {
+                const regexWithoutQuotes = /\{(?:[^{}]*|{[^{}]*})*\}/g;
+                matches.length = 0; // очищаем массив
+                while ((match = regexWithoutQuotes.exec(content)) !== null) {
+                    matches.push(match[0].trim());
+                }
+            }
+    
             if (matches.length !== 2) {
                 throw new Error('Unexpected number of JSON blocks');
             }
-
+    
             const ruData = JSON.parse(matches[0]);
             const enData = JSON.parse(matches[1]);
-
+    
             return { ru: ruData, en: enData };
         } catch (error) {
             this.logger.error('Ошибка при парсинге JSON:', error);
