@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Hotels } from './hotels.entity';
 import { Repository } from 'typeorm';
+import { AppDataSource } from 'data-source';
 
 @Injectable()
 export class HotelsRepository {
@@ -73,22 +74,20 @@ export class HotelsRepository {
     }
 
     async lockHotelsForProcessing(instanceId: number, batchSize: number): Promise<Hotels[]> {
-        const hotels = await this.hotelsRepository.find({
-            where: {
-                page_loaded: false,
-                locked_by: null,
-            },
-            order: {
-                id: 'ASC',
-            },
-            take: batchSize,
+        return await AppDataSource.transaction(async transactionalEntityManager => {
+            const hotels = await transactionalEntityManager.createQueryBuilder(Hotels, "hotel")
+                .where("hotel.page_loaded = false AND hotel.locked_by IS NULL")
+                .orderBy("hotel.id", "ASC")
+                .limit(batchSize)
+                .setLock("pessimistic_write")
+                .getMany();
+    
+            await Promise.all(hotels.map(hotel => {
+                return transactionalEntityManager.update(Hotels, hotel.id, { locked_by: instanceId.toString() });
+            }));
+    
+            return hotels;
         });
-
-        await Promise.all(hotels.map(hotel => {
-            return this.hotelsRepository.update(hotel.id, { locked_by: instanceId.toString() });
-        }));
-
-        return hotels;
     }
 
     async unlockHotel(id: string): Promise<void> {

@@ -178,12 +178,11 @@ export class HotelsService {
                 await this.extractAndStoreHotelFromPage(hotel.id);
 
                 // Снимаем блокировку и отмечаем страницу как загруженную после успешной обработки
-                await this.hotelsRepository.unlockHotel(hotel.id);
                 await this.hotelsRepository.updateHotelPageLoaded(hotel.id, true);
             } catch (error) {
                 this.logger.error(`Error processing hotel with ID ${hotel.id}:`, error.stack);
-
-                // Снимаем блокировку в случае ошибки, чтобы запись могла быть обработана позже
+            } finally {
+                // Снимаем блокировку в любом случае
                 await this.hotelsRepository.unlockHotel(hotel.id);
             }
         }
