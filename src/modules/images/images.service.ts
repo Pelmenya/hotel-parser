@@ -37,6 +37,7 @@ export class ImagesService {
                             const image = new Images();
                             image.name = resizedImagePath.split('/').pop();
                             image.original_name = originalName;
+                            image.original_url = imageUrl;
                             const size = sizes.find(size => resizedImagePath.includes(`${size.width}x${size.height}`));
                             image.size = size?.name;
                             image.width = size?.width;

@@ -18,6 +18,9 @@ export class Images {
     @Column({ nullable: true })
     original_name: string;
 
+    @Column({nullable: true })
+    original_url: string;
+
     @Column({ nullable: true })
     alt: string;
 
