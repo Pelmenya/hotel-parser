@@ -1,3 +1,4 @@
+// hotels.repository.ts
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Hotels } from './hotels.entity';
@@ -22,7 +23,6 @@ export class HotelsRepository {
         await this.hotelsRepository.delete(id);
     }
 
-    // Метод для безопасного создания записи с учетом уникальности
     async createIfNotExists(hotel: Partial<Hotels>): Promise<Hotels | null> {
         const existingHotel = await this.hotelsRepository.findOne({
             where: { hotel_link_ostrovok: hotel.hotel_link_ostrovok },
@@ -30,10 +30,9 @@ export class HotelsRepository {
 
         if (existingHotel) {
             console.log(`Hotel already exists: ${hotel.name}, ${hotel.address}`);
-            return null; // Возвращаем null, если отель уже существует
+            return null;
         }
 
-        // Вставляем отель с использованием ON CONFLICT DO NOTHING
         const query = `
             INSERT INTO hotels (name, address, hotel_link_ostrovok, locations_from, stars, district_id)
             VALUES ($1, $2, $3, $4, $5, $6)
@@ -46,10 +45,10 @@ export class HotelsRepository {
             hotel.hotel_link_ostrovok,
             hotel.locations_from,
             hotel.stars,
-            hotel.district.id, // Указываем id района
+            hotel.district ? hotel.district.id : null,
         ]);
 
-        return result[0] || null; // Возвращаем созданный отель или null, если вставка не произошла
+        return result[0] || null;
     }
 
     async findByNameAndAddress(name: string, address: string): Promise<Hotels | undefined> {
@@ -62,7 +61,7 @@ export class HotelsRepository {
                 id,
                 page_loaded: true
             }
-        })
+        });
     }
 
     async updateHotelPageLoaded(id: string, page_loaded: boolean): Promise<void> {
@@ -73,4 +72,26 @@ export class HotelsRepository {
         return this.hotelsRepository.save(hotel);
     }
 
+    async lockHotelsForProcessing(instanceId: number, batchSize: number): Promise<Hotels[]> {
+        const hotels = await this.hotelsRepository.find({
+            where: {
+                page_loaded: false,
+                locked_by: null,
+            },
+            order: {
+                id: 'ASC',
+            },
+            take: batchSize,
+        });
+
+        await Promise.all(hotels.map(hotel => {
+            return this.hotelsRepository.update(hotel.id, { locked_by: instanceId.toString() });
+        }));
+
+        return hotels;
+    }
+
+    async unlockHotel(id: string): Promise<void> {
+        await this.hotelsRepository.update(id, { locked_by: null });
+    }
 }

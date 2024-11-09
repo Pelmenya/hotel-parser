@@ -87,6 +87,9 @@ export class Hotels {
   @Column({ default: false })
   policies_processed: boolean;
 
+  @Column({ nullable: true })
+  locked_by?: string;
+
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
 

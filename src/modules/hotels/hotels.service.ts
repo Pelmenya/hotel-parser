@@ -163,33 +163,32 @@ export class HotelsService {
     }
 
     async saveHotelsPages(batchSize: number) {
-        const hotelsAll = await this.hotelsRepository.findAll();
+        this.logger.log(`Instance ${this.instanceId} is starting to process hotel pages.`);
 
+        const hotelsToProcess = await this.hotelsRepository.lockHotelsForProcessing(this.instanceId, batchSize);
 
-        const hotels = hotelsAll.sort((a, b) => a.id.localeCompare(b.id));
-
-        const pagesToProcess = Array.from({ length: hotels.length }, (_, i) => i + 1)
-            .filter(page =>
-                (page - 1) % this.totalInstances === this.instanceId - 1 && hotels[page] &&
-                !hotels[page].page_loaded
-            )
-            .slice(0, batchSize); //пачка для обработки
-
-        if (pagesToProcess.length === 0) {
-            this.logger.log(`All page for hotels are already loaded.`);
+        if (hotelsToProcess.length === 0) {
+            this.logger.log(`No more hotel pages to load.`);
             return;
         }
 
-        for (const page of pagesToProcess) {
+        for (const hotel of hotelsToProcess) {
             try {
-                await this.saveHotelPage(hotels[page].id, hotels[page].hotel_link_ostrovok)
-                await this.extractAndStoreHotelFromPage(hotels[page].id);
+                await this.saveHotelPage(hotel.id, hotel.hotel_link_ostrovok);
+                await this.extractAndStoreHotelFromPage(hotel.id);
+
+                // Снимаем блокировку и отмечаем страницу как загруженную после успешной обработки
+                await this.hotelsRepository.unlockHotel(hotel.id);
+                await this.hotelsRepository.updateHotelPageLoaded(hotel.id, true);
             } catch (error) {
-                this.logger.error(`Error loaded page ${page} of hotel ${hotels[page].hotel_link_ostrovok}:`, error.stack);
+                this.logger.error(`Error processing hotel with ID ${hotel.id}:`, error.stack);
+
+                // Снимаем блокировку в случае ошибки, чтобы запись могла быть обработана позже
+                await this.hotelsRepository.unlockHotel(hotel.id);
             }
         }
 
-        return pagesToProcess.length;
+        this.logger.log(`Instance ${this.instanceId} processed ${hotelsToProcess.length} hotel pages.`);
     }
 
     async getDataHotelFromJson(hotelLink: string) {
@@ -220,7 +219,7 @@ export class HotelsService {
             ];
 
             try {
-                
+
                 const results = await Promise.all(promises);
 
                 hotel.abouts_processed = results[0].success;
