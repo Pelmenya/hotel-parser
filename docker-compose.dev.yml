@@ -35,6 +35,7 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
+      - ./logs:/app/logs  # Монтируем директорию logs на хосте в /app/logs в контейнере
     ports:
       - ${DEV_PORT_1}:3000
     depends_on:

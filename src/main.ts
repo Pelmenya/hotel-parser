@@ -6,8 +6,13 @@ import * as path from 'path';
 
 async function bootstrap() {
   const instanceId = process.env.INSTANCE_ID || 'default';
+  // Создание директории для логов, если она не существует
+  const logsDir = path.join(__dirname, 'logs');
+  if (!fs.existsSync(logsDir)) {
+    fs.mkdirSync(logsDir);
+  }
   const logFileName = `error-${instanceId}.log`;
-  const logStream = fs.createWriteStream(path.join(__dirname, logFileName), { flags: 'a' });
+  const logStream = fs.createWriteStream(path.join(logsDir, logFileName), { flags: 'a' });
 
   process.on('uncaughtException', (err) => {
     const errorMessage = `[${new Date().toISOString()}] Uncaught Exception: ${err.stack}\n`;
