@@ -29,7 +29,7 @@ export class OpenAIService {
 
     async generate(data: TAbout): Promise<TOpenAIDataRes> {
         let attempt = 0;
-        const maxAttempts = 10;
+        const maxAttempts = 3;
 
         while (attempt < maxAttempts) {
             try {

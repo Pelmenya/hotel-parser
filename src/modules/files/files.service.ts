@@ -5,6 +5,7 @@ import { TransportService } from '../transport/transport.service';
 import sharp from 'sharp';
 import { TSuccess } from 'src/types/t-success';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { setDelay } from 'src/helpers/delay';
 
 @Injectable()
 export class FilesService {
@@ -39,7 +40,7 @@ export class FilesService {
     } catch (error) {
       if (retries > 0) {
         console.log(`Ошибка при скачивании изображения. Повтор через ${delay} мс. Осталось попыток: ${retries}`);
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await setDelay(delay);
         return this.fetchWithRetry(url, retries - 1, delay * 2);
       } else {
         throw error;
@@ -64,7 +65,7 @@ export class FilesService {
     const writer = createWriteStream(path);
 
     try {
-      const response = await this.fetchWithRetry(url, 5, 1000);
+      const response = await this.fetchWithRetry(url, 3, 1000);
       response.data.pipe(writer);
 
       return new Promise((resolve, reject) => {

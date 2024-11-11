@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { FilesService } from '../files/files.service';
 import { Hotels } from '../hotels/hotels.entity';
 import path from 'path';
+import { setDelay } from 'src/helpers/delay';
 
 @Injectable()
 export class ImagesService {
@@ -27,13 +28,14 @@ export class ImagesService {
             try {
                 const originalName = imageUrl.split('/').pop().split('.')[0];
                 const fileExtention = imageUrl.split('/').pop().split('.')[1];
-    
+
                 const imageIsExists = await this.imagesRepository.findOneByHotelIdAndOriginalName(hotel.id, originalName);
                 if (!imageIsExists) {
+                    await setDelay(100)
                     const imagePath = await this.filesService.downloadImage(imageUrl, tempFolderPath, `${uuidv4()}.${fileExtention}`);
-    
+
                     const resizedImagePaths = await this.filesService.resizeAndConvertImage(imagePath, sizes, path.join(tempFolderPath, 'resized'));
-    
+
                     for (const resizedImagePath of resizedImagePaths) {
                         try {
                             const image = new Images();
@@ -58,8 +60,8 @@ export class ImagesService {
                 console.error('Error processing image:', imageUrl, error);
             }
         }
-    
-        // Удаление временной папки с изображениями
-        await this.filesService.deleteFolder(tempFolderPath);
+
+        // Удаление временной папки с изображениями через 10 секунд
+        setTimeout(() => this.filesService.deleteFolder(tempFolderPath), 10000);
     }
 }
