@@ -8,7 +8,7 @@ import { Images } from './images.entity';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Images]), 
-    FilesModule
+    FilesModule,
   ],
   providers: [ImagesRepository, ImagesService],
   exports: [ImagesRepository, ImagesService]

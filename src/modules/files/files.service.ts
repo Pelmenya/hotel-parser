@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { createWriteStream, promises as fsPromises, readFile } from 'fs';
 import { join } from 'path';
 import { TransportService } from '../transport/transport.service';
@@ -6,30 +6,34 @@ import sharp from 'sharp';
 import { TSuccess } from 'src/types/t-success';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { setDelay } from 'src/helpers/delay';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { Logger } from 'winston';
 
 @Injectable()
 export class FilesService {
   private bucketName: string;
 
-  constructor(private readonly transportService: TransportService) {
+  constructor(
+    private readonly transportService: TransportService,
+    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
+  ) {
     this.bucketName = this.transportService.getBucket();
   }
 
   async uploadToS3(filePath: string, key: string): Promise<void> {
     const s3Client = this.transportService.getS3Client();
-    const fileContent = await fsPromises.readFile(filePath);
-
-    const params = {
-      Bucket: this.bucketName,
-      Key: key,
-      Body: fileContent,
-    };
-
     try {
+      const fileContent = await fsPromises.readFile(filePath);
+      const params = {
+        Bucket: this.bucketName,
+        Key: key,
+        Body: fileContent,
+      };
+
       await s3Client.send(new PutObjectCommand(params));
-      console.log(`Файл загружен на S3: ${key}`);
+      this.logger.info(`Файл загружен на S3: ${key}`);
     } catch (error) {
-      console.error('Ошибка при загрузке файла на S3:', error);
+      this.logger.error('Ошибка при загрузке файла на S3:', { error });
     }
   }
 
@@ -39,7 +43,7 @@ export class FilesService {
       return await axiosInstance.get(url);
     } catch (error) {
       if (retries > 0) {
-        console.log(`Ошибка при скачивании изображения. Повтор через ${delay} мс. Осталось попыток: ${retries}`);
+        this.logger.warn(`Ошибка при скачивании изображения. Повтор через ${delay} мс. Осталось попыток: ${retries}`);
         await setDelay(delay);
         return this.fetchWithRetry(url, retries - 1, delay * 2);
       } else {
@@ -57,7 +61,7 @@ export class FilesService {
     try {
       await fsPromises.mkdir(fullFolderPath, { recursive: true });
     } catch (error) {
-      console.error('Ошибка при создании каталога:', error);
+      this.logger.error('Ошибка при создании каталога:', { error });
       throw new Error('Ошибка при создании каталога: ' + error.message);
     }
 
@@ -71,16 +75,16 @@ export class FilesService {
       return new Promise((resolve, reject) => {
         writer.on('finish', () => resolve(path));
         writer.on('error', (error) => {
-          console.error('Ошибка при записи файла:', error);
+          this.logger.error('Ошибка при записи файла:', { error });
           reject(error);
         });
       });
     } catch (error) {
-      console.error('Ошибка при скачивании изображения:', error);
+      this.logger.error('Ошибка при скачивании изображения:', { error });
       try {
         await fsPromises.unlink(path);
       } catch (unlinkError) {
-        console.error('Ошибка при удалении частично загруженного файла:', unlinkError);
+        this.logger.error('Ошибка при удалении частично загруженного файла:', { unlinkError });
       }
       throw new Error('Ошибка при скачивании изображения: ' + error.message);
     }
@@ -95,7 +99,7 @@ export class FilesService {
         try {
           await fsPromises.mkdir(outputFolder, { recursive: true });
         } catch (error) {
-          console.error('Ошибка при создании каталога:', error);
+          this.logger.error('Ошибка при создании каталога:', { error });
           continue;
         }
 
@@ -111,15 +115,13 @@ export class FilesService {
 
           const s3Key = join(outputFolder.slice(1), outputFileName).replace(/\\/g, '/');
           await this.uploadToS3(outputFilePath, s3Key);
-          // await fsPromises.unlink(outputFilePath);
         } catch (error) {
-          console.error('Ошибка при изменении размеров изображения или загрузке в S3:', error);
+          this.logger.error('Ошибка при изменении размеров изображения или загрузке в S3:', { error });
           continue;
         }
       }
-      // await fsPromises.unlink(filePath);
     } catch (error) {
-      console.error('Ошибка при изменении размеров изображения:', error);
+      this.logger.error('Ошибка при изменении размеров изображения:', { error });
     }
 
     return convertedImagesPaths;
@@ -138,9 +140,9 @@ export class FilesService {
 
     try {
       await fsPromises.writeFile(filePath, data, 'utf8');
-      console.log(`Данные успешно записаны в ${filePath}`);
+      this.logger.info(`Данные успешно записаны в ${filePath}`);
     } catch (error) {
-      console.error('Ошибка при записи в файл:', error);
+      this.logger.error('Ошибка при записи в файл:', { error });
     }
   }
 
@@ -150,17 +152,18 @@ export class FilesService {
     try {
       await fsPromises.mkdir(fullFolderPath, { recursive: true });
     } catch (error) {
-      throw new Error('Ошибка при создании каталога: ' + error.message);
+      this.logger.error('Ошибка при создании каталога:', { error });
+      return { success: false };
     }
 
     const filePath = join(fullFolderPath, filename);
 
     try {
       await fsPromises.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
-      console.log(`Данные успешно записаны в ${filePath}`);
+      this.logger.info(`Данные успешно записаны в ${filePath}`);
       return { success: true };
     } catch (error) {
-      console.error('Ошибка при записи JSON в файл:', error);
+      this.logger.error('Ошибка при записи JSON в файл:', { error });
       return { success: false };
     }
   }
@@ -170,12 +173,14 @@ export class FilesService {
       const filePath = `${folder}/${filename}`;
       readFile(filePath, 'utf8', (err, data) => {
         if (err) {
+          this.logger.error('Ошибка при чтении файла:', { filePath, err });
           reject(err);
         } else {
           try {
             const jsonData = JSON.parse(data);
             resolve(jsonData);
           } catch (error) {
+            this.logger.error('Ошибка при парсинге JSON:', { filePath, error });
             reject(error);
           }
         }
@@ -190,7 +195,7 @@ export class FilesService {
       const jsonData = await this.readJsonFile(filename, fullFolderPath);
       return jsonData;
     } catch (error) {
-      console.error('Ошибка при чтении данных из JSON-файла:', error);
+      this.logger.error('Ошибка при чтении данных из JSON-файла:', { error });
       return Promise.resolve('Произошла ошибка при чтении данных из JSON-файла.');
     }
   }
@@ -207,9 +212,9 @@ export class FilesService {
     const filePath = join(__dirname, '..', 'uploads', folderPath, filename);
     try {
       await fsPromises.unlink(filePath);
-      console.log(`Файл удален: ${filePath}`);
+      this.logger.info(`Файл удален: ${filePath}`);
     } catch (error) {
-      console.error(`Ошибка при удалении файла ${filePath}:`, error);
+      this.logger.error(`Ошибка при удалении файла ${filePath}:`, { error });
     }
   }
 
@@ -217,10 +222,10 @@ export class FilesService {
     try {
       const fullFolderPath = join(__dirname, '..', 'uploads', folderPath || '');
       await fsPromises.rm(fullFolderPath, { recursive: true, force: true });
-      console.log(`Папка успешно удалена: ${folderPath}`);
+      this.logger.info(`Папка успешно удалена: ${folderPath}`);
     } catch (error) {
-      console.error(`Ошибка при удалении папки ${folderPath}:`, error);
+      this.logger.error(`Ошибка при удалении папки ${folderPath}:`, { error });
     }
   }
-  
 }
+
