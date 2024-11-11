@@ -242,7 +242,8 @@ export class HotelsService {
             await this.hotelsRepository.save(hotel);
 
             if (hotel.page_processed) {
-                await this.filesService.deleteFile(`pages/hotels/${hotelLinkPart}`, `page_${hotelLinkPart}.json`);
+                setTimeout(() =>
+                    this.filesService.deleteFolder(`pages/hotels/${hotelLinkPart}`), 60000);
             }
 
             return { hotel };
@@ -253,7 +254,7 @@ export class HotelsService {
         const $ = data;
         const aboutHotelDescriptionTitle = $('.About_about__Q75t5').children('.About_title__Jtfdw').text().trim() || '';
         const aboutHotelDescriptions = [];
-    
+
         if (aboutHotelDescriptionTitle || $('.About_description__KONG6').length) {
             $('.About_description__KONG6').each((idx, el) => {
                 const title = $(el).children('.About_descriptionTitle__0r__H').text().trim();
@@ -262,16 +263,16 @@ export class HotelsService {
                     aboutHotelDescriptions.push({ idx, title, paragraph });
                 }
             });
-    
+
             const dataDescription: TAbout = { aboutHotelDescriptionTitle, aboutHotelDescriptions };
-    
+
             try {
                 const openAIData = await this.retryableGenerate(dataDescription);
                 if (!openAIData || !openAIData.ru || !openAIData.en) {
                     this.logger.error('Invalid data received from OpenAI.');
                     return { success: false };
                 }
-    
+
                 const res = await this.aboutsService.saveOpenAIData(openAIData, hotel.id);
                 return { success: res.success };
             } catch (error) {
@@ -279,15 +280,15 @@ export class HotelsService {
                 return { success: false };
             }
         }
-    
+
         return { success: true }; // Возвращаем true, если данных нет, чтобы отметить как обработанное
     }
-    
+
     private async retryableGenerate(data: TAbout): Promise<TOpenAIDataRes> {
         let attempt = 0;
         const maxAttempts = 3;
         const delayBetweenAttempts = 1000; // 1 секунда
-    
+
         while (attempt < maxAttempts) {
             try {
                 return await this.openAIService.generate(data);

@@ -31,7 +31,7 @@ export class ImagesService {
 
                 const imageIsExists = await this.imagesRepository.findOneByHotelIdAndOriginalName(hotel.id, originalName);
                 if (!imageIsExists) {
-                    await setDelay(100)
+                    await setDelay(80)
                     const imagePath = await this.filesService.downloadImage(imageUrl, tempFolderPath, `${uuidv4()}.${fileExtention}`);
 
                     const resizedImagePaths = await this.filesService.resizeAndConvertImage(imagePath, sizes, path.join(tempFolderPath, 'resized'));
@@ -62,6 +62,6 @@ export class ImagesService {
         }
 
         // Удаление временной папки с изображениями через 10 секунд
-        setTimeout(() => this.filesService.deleteFolder(tempFolderPath), 10000);
+        setTimeout(() => this.filesService.deleteFolder(tempFolderPath), 60000);
     }
 }
