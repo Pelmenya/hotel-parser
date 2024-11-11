@@ -36,10 +36,10 @@ export class OpenAIService {
                 const content = await this.generateHotelDescription(data);
                 const parsedData = this.parseResponse(content);
 
-                if (parsedData.ru && parsedData.en) {
+                if (this.isValidTAbout(parsedData.ru) && this.isValidTAbout(parsedData.en)) {
                     return parsedData;
                 } else {
-                    throw new Error('Parsed data does not contain both language responses');
+                    throw new Error('Parsed data does not contain valid language responses');
                 }
             } catch (error) {
                 this.logger.error('Failed to generate hotel description, retrying:', error);
@@ -110,35 +110,45 @@ export class OpenAIService {
 
     private parseResponse(content: string): TOpenAIDataRes {
         try {
-            // Попробуем извлечь JSON-блоки с помощью двух подходов: с кавычками и без них
             const matches = [];
             const regexWithQuotes = /```(?:json)?\n([\s\S]*?)\n```/g;
             let match;
             while ((match = regexWithQuotes.exec(content)) !== null) {
                 matches.push(match[1].trim());
             }
-    
-            // Если не нашли блоков с кавычками, пробуем найти просто JSON-объекты
+
             if (matches.length < 2) {
                 const regexWithoutQuotes = /\{(?:[^{}]*|{[^{}]*})*\}/g;
-                matches.length = 0; // очищаем массив
+                matches.length = 0;
                 while ((match = regexWithoutQuotes.exec(content)) !== null) {
                     matches.push(match[0].trim());
                 }
             }
-    
+
             if (matches.length !== 2) {
                 throw new Error('Unexpected number of JSON blocks');
             }
-    
+
             const ruData = JSON.parse(matches[0]);
             const enData = JSON.parse(matches[1]);
-    
+
             return { ru: ruData, en: enData };
         } catch (error) {
             this.logger.error('Ошибка при парсинге JSON:', error);
             return { ru: null, en: null };
         }
+    }
+
+    private isValidTAbout(data: any): data is TAbout {
+        if (!data || typeof data !== 'object') return false;
+        if (typeof data.aboutHotelDescriptionTitle !== 'string') return false;
+        if (!Array.isArray(data.aboutHotelDescriptions)) return false;
+
+        return data.aboutHotelDescriptions.every((desc: any) =>
+            typeof desc.idx === 'number' &&
+            typeof desc.title === 'string' &&
+            typeof desc.paragraph === 'string'
+        );
     }
 
     private async translateFallback(data: TAbout): Promise<TOpenAIDataRes> {

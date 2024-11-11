@@ -4,8 +4,6 @@ import { join } from 'path';
 import { TransportService } from '../transport/transport.service';
 import sharp from 'sharp';
 import { TSuccess } from 'src/types/t-success';
-
-// Импортируйте необходимые компоненты из AWS SDK v3
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 
 @Injectable()
@@ -26,12 +24,26 @@ export class FilesService {
       Body: fileContent,
     };
 
-    // Используйте Send метод для выполнения команды
     try {
       await s3Client.send(new PutObjectCommand(params));
       console.log(`Файл загружен на S3: ${key}`);
     } catch (error) {
       console.error('Ошибка при загрузке файла на S3:', error);
+    }
+  }
+
+  private async fetchWithRetry(url: string, retries: number, delay: number): Promise<any> {
+    try {
+      const axiosInstance = this.transportService.getAxiosInstance('stream');
+      return await axiosInstance.get(url);
+    } catch (error) {
+      if (retries > 0) {
+        console.log(`Ошибка при скачивании изображения. Повтор через ${delay} мс. Осталось попыток: ${retries}`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return this.fetchWithRetry(url, retries - 1, delay * 2);
+      } else {
+        throw error;
+      }
     }
   }
 
@@ -52,8 +64,7 @@ export class FilesService {
     const writer = createWriteStream(path);
 
     try {
-      const axiosInstance = this.transportService.getAxiosInstance('stream');
-      const response = await axiosInstance.get(url);
+      const response = await this.fetchWithRetry(url, 5, 1000);
       response.data.pipe(writer);
 
       return new Promise((resolve, reject) => {
@@ -66,7 +77,7 @@ export class FilesService {
     } catch (error) {
       console.error('Ошибка при скачивании изображения:', error);
       try {
-        await fsPromises.unlink(path); // Удалите файл, если он был частично загружен
+        await fsPromises.unlink(path);
       } catch (unlinkError) {
         console.error('Ошибка при удалении частично загруженного файла:', unlinkError);
       }
@@ -99,13 +110,13 @@ export class FilesService {
 
           const s3Key = join(outputFolder.slice(1), outputFileName).replace(/\\/g, '/');
           await this.uploadToS3(outputFilePath, s3Key);
-          //await fsPromises.unlink(outputFilePath); // Удаляем локальный файл после загрузки в S3
+          // await fsPromises.unlink(outputFilePath);
         } catch (error) {
           console.error('Ошибка при изменении размеров изображения или загрузке в S3:', error);
           continue;
         }
       }
-      //await fsPromises.unlink(filePath); // Удаление исходного файла после обработки
+      // await fsPromises.unlink(filePath);
     } catch (error) {
       console.error('Ошибка при изменении размеров изображения:', error);
     }
@@ -113,7 +124,6 @@ export class FilesService {
     return convertedImagesPaths;
   }
 
-  // Остальные методы остаются без изменений
   async saveDataToFile(data: any, filename: string, folderPath: string): Promise<void> {
     const fullFolderPath = join(__dirname, '..', 'uploads', folderPath || '');
 
@@ -202,4 +212,14 @@ export class FilesService {
     }
   }
 
+  async deleteFolder(folderPath: string): Promise<void> {
+    try {
+      const fullFolderPath = join(__dirname, '..', 'uploads', folderPath || '');
+      await fsPromises.rm(fullFolderPath, { recursive: true, force: true });
+      console.log(`Папка успешно удалена: ${folderPath}`);
+    } catch (error) {
+      console.error(`Ошибка при удалении папки ${folderPath}:`, error);
+    }
+  }
+  
 }

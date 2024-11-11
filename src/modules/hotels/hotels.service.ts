@@ -10,7 +10,7 @@ import * as cheerio from 'cheerio';
 import { ImagesService } from '../images/images.service';
 import { replaceResolutionInUrl } from 'src/helpers/replace-resolution-in-url';
 import { TAbout } from '../abouts/abouts.types';
-import { OpenAIService } from '../openai/openai.service';
+import { OpenAIService, TOpenAIDataRes } from '../openai/openai.service';
 import { AboutsService } from '../abouts/abouts.service';
 import { Hotels } from './hotels.entity';
 import { AmenitiesService } from '../amenities/amenities.service';
@@ -22,6 +22,7 @@ import { extractGeoCategories } from 'src/helpers/exract-geo-categories';
 import { GeoService } from '../geo/geo.service';
 import { TSuccess } from 'src/types/t-success';
 import { PoliciesService } from '../policies/policies.service';
+import { setDelay } from 'src/helpers/delay';
 
 
 @Injectable()
@@ -252,7 +253,7 @@ export class HotelsService {
         const $ = data;
         const aboutHotelDescriptionTitle = $('.About_about__Q75t5').children('.About_title__Jtfdw').text().trim() || '';
         const aboutHotelDescriptions = [];
-
+    
         if (aboutHotelDescriptionTitle || $('.About_description__KONG6').length) {
             $('.About_description__KONG6').each((idx, el) => {
                 const title = $(el).children('.About_descriptionTitle__0r__H').text().trim();
@@ -261,14 +262,45 @@ export class HotelsService {
                     aboutHotelDescriptions.push({ idx, title, paragraph });
                 }
             });
-
+    
             const dataDescription: TAbout = { aboutHotelDescriptionTitle, aboutHotelDescriptions };
-            const openAIData = await this.openAIService.generate(dataDescription);
-            const res = await this.aboutsService.saveOpenAIData(openAIData, hotel.id);
-            return { success: res.success };
+    
+            try {
+                const openAIData = await this.retryableGenerate(dataDescription);
+                if (!openAIData || !openAIData.ru || !openAIData.en) {
+                    this.logger.error('Invalid data received from OpenAI.');
+                    return { success: false };
+                }
+    
+                const res = await this.aboutsService.saveOpenAIData(openAIData, hotel.id);
+                return { success: res.success };
+            } catch (error) {
+                this.logger.error('Failed to process hotel about data:', error);
+                return { success: false };
+            }
         }
-
+    
         return { success: true }; // Возвращаем true, если данных нет, чтобы отметить как обработанное
+    }
+    
+    private async retryableGenerate(data: TAbout): Promise<TOpenAIDataRes> {
+        let attempt = 0;
+        const maxAttempts = 3;
+        const delayBetweenAttempts = 1000; // 1 секунда
+    
+        while (attempt < maxAttempts) {
+            try {
+                return await this.openAIService.generate(data);
+            } catch (error) {
+                this.logger.warn(`Attempt ${attempt + 1} failed: ${error.message}`);
+                attempt++;
+                if (attempt >= maxAttempts) {
+                    this.logger.error('All attempts to generate data failed.');
+                    throw error;
+                }
+                await setDelay(delayBetweenAttempts);
+            }
+        }
     }
 
     async createHotelImagesFromPage(data: cheerio.Root, hotel: Hotels): Promise<TSuccess> {

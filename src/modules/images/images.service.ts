@@ -4,6 +4,7 @@ import { Images, TImageHeight, TImageSize, TImageWidth } from './images.entity';
 import { v4 as uuidv4 } from 'uuid';
 import { FilesService } from '../files/files.service';
 import { Hotels } from '../hotels/hotels.entity';
+import path from 'path';
 
 @Injectable()
 export class ImagesService {
@@ -20,18 +21,19 @@ export class ImagesService {
             { width: 240, height: 240, name: 'thumbnail' }
             //          { width: 220, height: 220, name: 'small' },
         ];
+        const tempFolderPath = `images/hotels/${hotel.id}`;
 
         for (const imageUrl of imageUrls) {
             try {
                 const originalName = imageUrl.split('/').pop().split('.')[0];
                 const fileExtention = imageUrl.split('/').pop().split('.')[1];
-
+    
                 const imageIsExists = await this.imagesRepository.findOneByHotelIdAndOriginalName(hotel.id, originalName);
                 if (!imageIsExists) {
-                    const imagePath = await this.filesService.downloadImage(imageUrl, `images/hotels/${hotel.id}`, `${uuidv4()}.${fileExtention}`);
-
-                    const resizedImagePaths = await this.filesService.resizeAndConvertImage(imagePath, sizes, `images/hotels/${hotel.id}/resized`);
-
+                    const imagePath = await this.filesService.downloadImage(imageUrl, tempFolderPath, `${uuidv4()}.${fileExtention}`);
+    
+                    const resizedImagePaths = await this.filesService.resizeAndConvertImage(imagePath, sizes, path.join(tempFolderPath, 'resized'));
+    
                     for (const resizedImagePath of resizedImagePaths) {
                         try {
                             const image = new Images();
@@ -56,5 +58,8 @@ export class ImagesService {
                 console.error('Error processing image:', imageUrl, error);
             }
         }
+    
+        // Удаление временной папки с изображениями
+        await this.filesService.deleteFolder(tempFolderPath);
     }
 }

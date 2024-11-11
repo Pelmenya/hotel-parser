@@ -3,6 +3,8 @@ import { AppModule } from './app.module';
 import { AppDataSource } from 'data-source';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as winston from 'winston';
+import { WinstonModule } from 'nest-winston';
 
 async function bootstrap() {
   const instanceId = process.env.INSTANCE_ID || 'default';
@@ -11,39 +13,48 @@ async function bootstrap() {
   if (!fs.existsSync(logsDir)) {
     fs.mkdirSync(logsDir);
   }
-  const logFileName = `error-${instanceId}.log`;
-  const logStream = fs.createWriteStream(path.join(logsDir, logFileName), { flags: 'a' });
+  const logger = winston.createLogger({
+    level: 'info',
+    format: winston.format.combine(
+      winston.format.colorize(), // Добавляем цвет
+      winston.format.label({ label: `Instance: ${instanceId}` }),
+      winston.format.timestamp(),
+      winston.format.printf(({ timestamp, level, message, label }) => {
+        return `[${timestamp}] [${label}] ${level}: ${message}`;
+      })
+    ),
+    transports: [
+      new winston.transports.File({ filename: `${logsDir}/error-${instanceId}.log`, level: 'error' }),
+      new winston.transports.Console()
+    ],
+  });
 
   process.on('uncaughtException', (err) => {
-    const errorMessage = `[${new Date().toISOString()}] Uncaught Exception: ${err.stack}\n`;
-    console.error(errorMessage);
-    logStream.write(errorMessage);
+    logger.error(`Uncaught Exception: ${err.stack}`);
     process.exit(1);
   });
 
   process.on('unhandledRejection', (reason, promise) => {
-    const errorMessage = `[${new Date().toISOString()}] Unhandled Rejection at: ${promise}, reason: ${reason instanceof Error ? reason.stack : reason}\n`;
-    console.error(errorMessage);
-    logStream.write(errorMessage);
+    logger.error(`Unhandled Rejection at: ${promise}, reason: ${reason instanceof Error ? reason.stack : reason}`);
   });
 
   try {
     await AppDataSource.initialize();
-    console.log('Data Source has been initialized!');
+    logger.info('Data Source has been initialized!');
   } catch (err) {
-    const errorMessage = `[${new Date().toISOString()}] Error during Data Source initialization: ${err.stack || err}\n`;
-    console.error(errorMessage);
-    logStream.write(errorMessage);
+    logger.error(`Error during Data Source initialization: ${err.stack || err}`);
   }
 
   try {
-    const app = await NestFactory.create(AppModule);
+    const app = await NestFactory.create(AppModule, {
+      logger: WinstonModule.createLogger({
+        instance: logger,
+      }),
+    });
     await app.listen(3000);
-    console.log(`Application is running on: http://localhost:3000 (Instance: ${instanceId})`);
+    logger.info(`Application is running on: http://localhost:3000 (Instance: ${instanceId})`);
   } catch (err) {
-    const errorMessage = `[${new Date().toISOString()}] Error during application bootstrap: ${err.stack || err}\n`;
-    console.error(errorMessage);
-    logStream.write(errorMessage);
+    logger.error(`Error during application bootstrap: ${err.stack || err}`);
   }
 }
 
