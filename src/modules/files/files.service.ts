@@ -90,40 +90,45 @@ export class FilesService {
     }
   }
 
+  async retryOperation<T>(operation: () => Promise<T>, retries: number, delay: number): Promise<T> {
+    try {
+      return await operation();
+    } catch (error) {
+      if (retries > 0) {
+        await setDelay(delay);
+        return this.retryOperation(operation, retries - 1, delay);
+      } else {
+        this.logger.error('Ошибка retry operation', { error });
+      }
+    }
+  }
+
   async resizeAndConvertImage(filePath: string, sizes: { width: number; height: number }[], outputFolderPath: string): Promise<string[]> {
     const convertedImagesPaths: string[] = [];
-    try {
-      for (const size of sizes) {
-        const outputFolder = join(__dirname, '..', 'uploads', outputFolderPath, `${size.width}x${size.height}`);
+    for (const size of sizes) {
+      const outputFolder = join(__dirname, '..', 'uploads', outputFolderPath, `${size.width}x${size.height}`);
 
-        try {
-          await fsPromises.mkdir(outputFolder, { recursive: true });
-        } catch (error) {
-          this.logger.error('Ошибка при создании каталога:', { error });
-          continue;
-        }
-
+      try {
+        await this.retryOperation(() => fsPromises.mkdir(outputFolder, { recursive: true }), 3, 1000);
         const outputFileName = filePath.split('/').pop().replace(/\.\w+$/, '.webp');
         const outputFilePath = join(outputFolder, outputFileName);
         convertedImagesPaths.push(outputFilePath);
 
-        try {
-          await sharp(filePath)
+        await this.retryOperation(() =>
+          sharp(filePath)
             .resize(size.width, size.height)
             .webp()
-            .toFile(outputFilePath);
+            .toFile(outputFilePath),
+          3,
+          1000
+        );
 
-          const s3Key = join(outputFolder.slice(1), outputFileName).replace(/\\/g, '/');
-          await this.uploadToS3(outputFilePath, s3Key);
-        } catch (error) {
-          this.logger.error('Ошибка при изменении размеров изображения или загрузке в S3:', { error });
-          continue;
-        }
+        const s3Key = join(outputFolder.slice(1), outputFileName).replace(/\\/g, '/');
+        await this.uploadToS3(outputFilePath, s3Key);
+      } catch (error) {
+        this.logger.error('Ошибка при изменении размеров изображения или загрузке в S3:', { error });
       }
-    } catch (error) {
-      this.logger.error('Ошибка при изменении размеров изображения:', { error });
     }
-
     return convertedImagesPaths;
   }
 
@@ -218,14 +223,31 @@ export class FilesService {
     }
   }
 
+  async folderExists(folderPath: string): Promise<boolean> {
+    try {
+      await fsPromises.access(folderPath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   async deleteFolder(folderPath: string): Promise<void> {
     try {
       const fullFolderPath = join(__dirname, '..', 'uploads', folderPath || '');
-      await fsPromises.rm(fullFolderPath, { recursive: true, force: true });
-      this.logger.info(`Папка успешно удалена: ${folderPath}`);
+
+      if (await this.folderExists(fullFolderPath)) {
+        await this.retryOperation(() => fsPromises.rm(fullFolderPath, { recursive: true, force: true }), 3, 1000);
+        this.logger.info(`Папка успешно удалена: ${folderPath}`);
+      } else {
+        this.logger.warn(`Папка не существует и не может быть удалена: ${folderPath}`);
+      }
+
     } catch (error) {
       this.logger.error(`Ошибка при удалении папки ${folderPath}:`, { error });
     }
   }
+
 }
+
 

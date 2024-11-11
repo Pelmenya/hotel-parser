@@ -28,13 +28,14 @@ export class DistrictsController {
       return await this.districtsService.updateDistrictsCountPages();
     }
 
+    // Запускает сохранение страниц district по его ссылке
     @Post('single-pages')
     @HttpCode(200)
     async saveDistrictPages(@Query() params: { districtLink: string }): Promise<any> {
       return await this.districtsService.saveDistrictPages(params.districtLink);
     }
 
-    // 3. Запускает сохранение страниц в папку districts/<district.slug>page_1.json
+    // 4. Запускает сохранение страниц в папку districts/<district.slug>page_1.json
     @Post('all-pages')
     @HttpCode(200)
     async saveDistrictsPagesAll(): Promise<any> {
