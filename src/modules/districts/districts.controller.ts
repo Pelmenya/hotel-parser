@@ -21,7 +21,7 @@ export class DistrictsController {
         return await this.districtsService.createDistrictsFromPages();
     }
 
-    // 3. Запускает update числа страниц регионов из страниц в папке pages, формат страницы : page_111.json
+    // 3. Запускает update числа страниц регионов 
     @Put('count-page')
     @HttpCode(200)
     async updateDistrictsCountPages(): Promise<any> {
