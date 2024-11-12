@@ -9,7 +9,7 @@ docker compose up --build
 ```
 ### Dump BD
 ``` cmd
-docker exec -i postgres_postgis_parser /bin/bash -c "PGPASSWORD=secret pg_dump --username postgres hotel_parser" > ./dump/dump.sql
+docker exec -i postgres_postgis_parser /bin/bash -c "PGPASSWORD=secret pg_dump --username postgres hotel_parser" > ./dump/$(date +"%Y%m%d_%H%M%S").sql
 ```
 
 ### Restore BD

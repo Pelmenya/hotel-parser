@@ -67,6 +67,7 @@ export class DistrictsService {
         }
 
         this.logger.log('All pages processing completed');
+        setTimeout(() => this.filesService.deleteFolder('pages'), 2000);
         return districts;
     }
 
