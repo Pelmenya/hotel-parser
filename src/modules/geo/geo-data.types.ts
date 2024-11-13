@@ -1,4 +1,4 @@
-export type TDistanceMeasurement = 'km' | 'm' | 'км' |'м';
+import { TDistanceMeasurement } from "src/types/t-distance-measurement";
 
 export type TGeoData = {
     idx: number;

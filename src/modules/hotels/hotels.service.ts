@@ -23,6 +23,7 @@ import { GeoService } from '../geo/geo.service';
 import { TSuccess } from 'src/types/t-success';
 import { PoliciesService } from '../policies/policies.service';
 import { setDelay } from 'src/helpers/delay';
+import { TLocationsFrom } from 'src/types/t-locations-from';
 
 
 @Injectable()
@@ -113,10 +114,13 @@ export class HotelsService {
                 const hotel_link_ostrovok = $(element).find('.HotelCard_title__cpfvk').children('a').attr('href') || '';
                 const name = $(element).find('.HotelCard_title__cpfvk').attr('title').trim() || '';
                 const address = $(element).find('.HotelCard_address__AvnV2').text()?.trim() || '';
-                const locations_from = [];
-                $(element).children('.HotelCard_distances__pVfDQ').map((i, el) => {
-                    const distance_from = $(el).text();
-                    locations_from.push(distance_from);
+                const locations_from: TLocationsFrom[] = [];
+                $(element).find('.HotelCard_distance__CEiC3').each((idx, el) => {
+                    const distance = $(el).children('.HotelCard_distanceValue__TbHp_').text().trim();
+                    const distanceValue = parseFloat(distance.replace('км', '').replace('м', '').replace(',', '.'));
+                    const measurement = distance.replace(String(distanceValue), '') as TDistanceMeasurement;
+                    const distance_from = filterSpaces($(el).text().trim()).replace(distance, '');
+                    locations_from.push({ idx, measurement, distance_value: distanceValue, original: distance_from ? distance_from : '', translated: '' });
                 });
                 const stars = $(element).find('.Stars_stars__OMmzT').children('.Stars_star__jwPss').length || 0;
 

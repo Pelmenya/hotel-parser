@@ -16,4 +16,9 @@ SELECT
 FROM districts WHERE all_pages_loaded = false AND count_pages > 0
 ORDER BY count_pages DESC;
 
-SELECT COUNT(*) FROM districts WHERE count_pages < 1
+/*
+UPDATE districts
+SET processed_hotels_from_pages = '';
+*/
+
+SELECT processed_hotels_from_pages FROM districts;

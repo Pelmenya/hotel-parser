@@ -1,4 +1,3 @@
-// hotels.repository.ts
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Hotels } from './hotels.entity';
@@ -34,6 +33,9 @@ export class HotelsRepository {
             return null;
         }
 
+        // Преобразование locations_from в формат JSON
+        const locationsFromJson = JSON.stringify(hotel.locations_from);
+
         const query = `
             INSERT INTO hotels (name, address, hotel_link_ostrovok, locations_from, stars, district_id)
             VALUES ($1, $2, $3, $4, $5, $6)
@@ -44,7 +46,7 @@ export class HotelsRepository {
             hotel.name,
             hotel.address,
             hotel.hotel_link_ostrovok,
-            hotel.locations_from,
+            locationsFromJson,
             hotel.stars,
             hotel.district ? hotel.district.id : null,
         ]);

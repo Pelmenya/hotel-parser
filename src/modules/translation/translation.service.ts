@@ -106,10 +106,12 @@ export class TranslationService {
       });
 
       if (translation) {
+        // Если запись уже существует, просто обновляем её
         translation.name = name;
         translation.translated_text = translatedText;
         translation.updated_at = new Date();
       } else {
+        // Если записи нет, создаем новую
         translation = this.translationRepository.create({
           name,
           original_text: originalText,
@@ -124,6 +126,7 @@ export class TranslationService {
       throw new Error('Failed to save translation to dictionary');
     }
   }
+
 
   public async translateText(name: TTranslationName, text: string, targetLang: TLanguage): Promise<string> {
     this.resetSymbolsCounter();

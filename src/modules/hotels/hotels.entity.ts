@@ -15,6 +15,9 @@ import { Abouts } from '../abouts/abouts.entity';
 import { Amenities } from '../amenities/amenities.entity';
 import { GeoData } from '../geo/geo-data.entity';
 import { Policies } from '../policies/policies.entity';
+import { TTranslateText } from 'src/types/t-translate-text';
+import { TGeoData } from '../geo/geo-data.types';
+import { TLocationsFrom } from 'src/types/t-locations-from';
 
 @Entity()
 @Index(['hotel_link_ostrovok', 'address'], { unique: true })
@@ -40,8 +43,8 @@ export class Hotels {
   @Column({ nullable: true, unique: true })
   hotel_link_ostrovok?: string;
 
-  @Column("simple-array", { nullable: true })
-  locations_from?: string[];
+  @Column({ type: 'jsonb', nullable: true })
+  locations_from?: TLocationsFrom[] = [];
 
   @Column({ type: 'int', nullable: true })
   stars?: number;
