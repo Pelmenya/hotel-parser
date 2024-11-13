@@ -27,6 +27,7 @@ export class HotelsController {
     }
 
     // запускает создание отелей из страниц в папке pages/districts/<district> на всех серверах
+    // для этого дожны быть предварительно выполнены все действия, описанные в контроллерах districts
     @Post('from-districts-pages-all')
     @HttpCode(200)
     async createHotelsFromDistrictPagesAll(@Query() params: { district: string }): Promise<any> {

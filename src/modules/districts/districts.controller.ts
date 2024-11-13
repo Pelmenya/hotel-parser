@@ -36,6 +36,7 @@ export class DistrictsController {
     }
 
     // 4. Запускает сохранение страниц в папку districts/<district.slug>page_1.json
+    // Запуск возможно многократно, бывает слетает с о страниц
     @Post('all-pages')
     @HttpCode(200)
     async saveDistrictsPagesAll(): Promise<any> {

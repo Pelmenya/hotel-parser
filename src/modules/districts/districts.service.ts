@@ -74,7 +74,7 @@ export class DistrictsService {
     async processSaveAllDistricts() {
         try {
             const districts = await this.districtsRepository.findAll();
-            const districtsToProcess = districts.filter(d => d.count_pages > 0 && d.all_pages_loaded);
+            const districtsToProcess = districts.filter(d => d.count_pages > 0 && !d.all_pages_loaded);
 
             for (const district of districtsToProcess) {
                 try {
