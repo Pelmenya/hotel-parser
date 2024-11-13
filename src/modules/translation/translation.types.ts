@@ -7,5 +7,6 @@ export type TTranslationName =
     | 'policy name'
     | 'policy text'
     | 'policy'
-    | 'description';
+    | 'description'
+    |'hotel from location';
 

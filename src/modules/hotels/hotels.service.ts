@@ -17,13 +17,14 @@ import { AmenitiesService } from '../amenities/amenities.service';
 import { TranslationService } from '../translation/translation.service';
 import { filterSpaces } from 'src/helpers/filter-spaces';
 import { TTranslateText } from 'src/types/t-translate-text';
-import { TDistanceMeasurement, TGeoData } from '../geo/geo-data.types';
+import { TGeoData } from '../geo/geo-data.types';
 import { extractGeoCategories } from 'src/helpers/exract-geo-categories';
 import { GeoService } from '../geo/geo.service';
 import { TSuccess } from 'src/types/t-success';
 import { PoliciesService } from '../policies/policies.service';
 import { setDelay } from 'src/helpers/delay';
 import { TLocationsFrom } from 'src/types/t-locations-from';
+import { TDistanceMeasurement } from 'src/types/t-distance-measurement';
 
 
 @Injectable()
@@ -105,25 +106,40 @@ export class HotelsService {
         }
     }
 
-    private async extractAndStoreHotelsFromDistrictPage(district: Districts, page: number): Promise<boolean> {
+    async extractAndStoreHotelsFromDistrictPage(district: Districts, page: number): Promise<boolean> {
         try {
             const data = await this.filesService.readDataPageRussianHotelsFromJson(district.district_link_ostrovok.split('/')[3], page);
             const $ = cheerio.load(data);
-
+    
             const pagePromises = $('.HotelCard_mainInfo__pNKYU').map(async (index, element) => {
                 const hotel_link_ostrovok = $(element).find('.HotelCard_title__cpfvk').children('a').attr('href') || '';
                 const name = $(element).find('.HotelCard_title__cpfvk').attr('title').trim() || '';
                 const address = $(element).find('.HotelCard_address__AvnV2').text()?.trim() || '';
                 const locations_from: TLocationsFrom[] = [];
-                $(element).find('.HotelCard_distance__CEiC3').each((idx, el) => {
-                    const distance = $(el).children('.HotelCard_distanceValue__TbHp_').text().trim();
-                    const distanceValue = parseFloat(distance.replace('км', '').replace('м', '').replace(',', '.'));
-                    const measurement = distance.replace(String(distanceValue), '') as TDistanceMeasurement;
-                    const distance_from = filterSpaces($(el).text().trim()).replace(distance, '');
-                    locations_from.push({ idx, measurement, distance_value: distanceValue, original: distance_from ? distance_from : '', translated: '' });
-                });
+                
+                // Используем `await` внутри цикла
+                for (const [idx, el] of $(element).find('.HotelCard_distance__CEiC3').toArray().entries()) {
+                    try {
+                        const distance = $(el).children('.HotelCard_distanceValue__TbHp_').text().trim();
+                        const distanceValue = parseFloat(distance.replace('км', '').replace('м', '').replace(',', '.'));
+                        const measurement = distance.replace(String(distanceValue), '') as TDistanceMeasurement;
+                        const distance_from = filterSpaces($(el).text().trim()).replace(distance, '');
+                        const original = distance_from ? distance_from : '';
+    
+                        // Ожидание перевода и обработка ошибок
+                        let translated = '';
+                        if (original) {
+                            translated = await this.translationService.translateText('hotel from location', original, 'en');
+                        }
+    
+                        locations_from.push({ idx, measurement, distance_value: distanceValue, original, translated });
+                    } catch (translationError) {
+                        this.logger.error(`Ошибка перевода для местоположения в отеле ${name}: ${translationError.message}`);
+                    }
+                }
+    
                 const stars = $(element).find('.Stars_stars__OMmzT').children('.Stars_star__jwPss').length || 0;
-
+    
                 const hotelData = {
                     name,
                     address,
@@ -132,23 +148,23 @@ export class HotelsService {
                     stars,
                     district, // Добавляем район к данным отеля
                 };
-
+    
                 const createdHotel = await this.hotelsRepository.createIfNotExists(hotelData);
                 if (createdHotel) {
-                    this.logger.log(`Hotel created: ${createdHotel.name}, ${createdHotel.address}`);
+                    this.logger.log(`Отель создан: ${createdHotel.name}, ${createdHotel.address}`);
                 } else {
-                    this.logger.log(`Hotel already exists: ${name}, ${address}`);
+                    this.logger.log(`Отель уже существует: ${name}, ${address}`);
                 }
             }).get();
-
+    
             await Promise.all(pagePromises);
             return true; // Успешная обработка страницы
         } catch (error) {
-            this.logger.error(`Error processing page ${page}:`, error.stack);
+            this.logger.error(`Ошибка обработки страницы ${page}:`, error.stack);
             return false; // Неуспешная обработка страницы
         }
     }
-
+    
     async getRussianHotelsByPageAndDistrict(district: string, page: number) {
         return await this.filesService.readDataPageRussianHotelsFromJson(district, page);
     }
