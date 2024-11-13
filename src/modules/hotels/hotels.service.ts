@@ -144,13 +144,27 @@ export class HotelsService {
                     name,
                     address,
                     hotel_link_ostrovok,
-                    locations_from,
                     stars,
                     district, // Добавляем район к данным отеля
                 };
     
                 const createdHotel = await this.hotelsRepository.createIfNotExists(hotelData);
                 if (createdHotel) {
+                    const headerTitles: TTranslateText = {
+                        original: 'Шапка',
+                        translated: 'Header'
+                    }
+                    const headerGeo: Array<TTranslateText & Partial<TGeoData>> = locations_from.map((geo) => 
+                        ({
+                            idx: geo.idx,
+                            original: geo.original,
+                            translated: geo.translated,
+                            measurement: geo.measurement,
+                            distance_from_hotel: geo.distance_value,
+                            category: geo.original.split(' ')[1] === 'центра' ? 'CENTER' : geo.original.split(' ')[1] === 'метро' ? 'SUBWAY' : 'UNDEFINED'
+                        })
+                    )
+                    await this.geoService.saveGeoData(createdHotel.id, headerTitles, headerGeo, 'head');
                     this.logger.log(`Отель создан: ${createdHotel.name}, ${createdHotel.address}`);
                 } else {
                     this.logger.log(`Отель уже существует: ${name}, ${address}`);

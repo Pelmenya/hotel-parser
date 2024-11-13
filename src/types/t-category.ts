@@ -1,1 +1,1 @@
-export type TCategory = 'main' | 'additional';
+export type TCategory = 'main' | 'additional'| 'head';

@@ -43,9 +43,6 @@ export class Hotels {
   @Column({ nullable: true, unique: true })
   hotel_link_ostrovok?: string;
 
-  @Column({ type: 'jsonb', nullable: true })
-  locations_from?: TLocationsFrom[] = [];
-
   @Column({ type: 'int', nullable: true })
   stars?: number;
 
