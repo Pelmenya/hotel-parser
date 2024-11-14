@@ -7,7 +7,7 @@ export type TImageWidth = 1024 | 828 | 640 | 220 | 240;
 export type TImageHeight = 768 | 560 | 400 | 220 | 240;
 
 @Entity()
-@Index(['hotel', 'original_name'])
+@Index(['hotel', 'size', 'original_url'], { unique: true }) // Уникальный индекс
 export class Images {
     @PrimaryGeneratedColumn("uuid")
     id: string;
@@ -38,15 +38,15 @@ export class Images {
 
     @Index()
     @ManyToOne(() => Hotels, (hotel) => hotel.images, { nullable: true })
-    @JoinColumn({ name: 'hotel_id' }) // Явное имя столбца
+    @JoinColumn({ name: 'hotel_id' })
     hotel?: Hotels;
 
     @Column({ nullable: true, unique: true })
     path: string;
 
-    @CreateDateColumn({ type: 'timestamp' }) // Автоматическое заполнение даты создания
+    @CreateDateColumn({ type: 'timestamp' })
     created_at: Date;
 
-    @UpdateDateColumn({ type: 'timestamp' }) // Автоматическое обновление даты изменения
+    @UpdateDateColumn({ type: 'timestamp' })
     updated_at: Date;
 }
