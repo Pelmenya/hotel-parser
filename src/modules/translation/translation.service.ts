@@ -1,20 +1,19 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosInstance } from 'axios';
 import * as fs from 'fs';
 import * as jose from 'node-jose';
 import Bottleneck from 'bottleneck';
-import { Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
-import { TranslationDictionary } from './translation-dictionary.entity';
+import { TranslationRepository } from './translation.repository';
 import { TransportService } from '../transport/transport.service';
 import { TTranslationName } from './translation.types';
 import { setDelay } from 'src/helpers/delay';
 import { TLanguage } from 'src/types/t-language';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { Logger } from 'winston';
 
 @Injectable()
 export class TranslationService {
-  private readonly logger = new Logger(TranslationService.name);
   private axiosInstance: AxiosInstance;
   private limiter = new Bottleneck({
     reservoir: 10,
@@ -31,8 +30,8 @@ export class TranslationService {
   constructor(
     private readonly configService: ConfigService,
     private readonly transportService: TransportService,
-    @InjectRepository(TranslationDictionary)
-    private readonly translationRepository: Repository<TranslationDictionary>,
+    private readonly translationRepository: TranslationRepository,
+    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
   ) {
     this.axiosInstance = this.transportService.getAxiosInstance();
   }
@@ -89,45 +88,6 @@ export class TranslationService {
     return this.iamToken;
   }
 
-  private async getTranslationFromDictionary(text: string, targetLang: string): Promise<string | null> {
-    try {
-      const translation = await this.translationRepository.findOne({ where: { original_text: text, language: targetLang } });
-      return translation ? translation.translated_text : null;
-    } catch (error) {
-      this.logger.error('Failed to retrieve translation from dictionary', error.stack);
-      throw new Error('Failed to retrieve translation from dictionary');
-    }
-  }
-
-  private async saveTranslationToDictionary(name: TTranslationName, originalText: string, translatedText: string, targetLang: string) {
-    try {
-      let translation = await this.translationRepository.findOne({
-        where: { original_text: originalText, language: targetLang },
-      });
-
-      if (translation) {
-        // Если запись уже существует, просто обновляем её
-        translation.name = name;
-        translation.translated_text = translatedText;
-        translation.updated_at = new Date();
-      } else {
-        // Если записи нет, создаем новую
-        translation = this.translationRepository.create({
-          name,
-          original_text: originalText,
-          translated_text: translatedText,
-          language: targetLang,
-        });
-      }
-
-      await this.translationRepository.save(translation);
-    } catch (error) {
-      this.logger.error('Failed to save translation to dictionary', error.stack);
-      throw new Error('Failed to save translation to dictionary');
-    }
-  }
-
-
   public async translateText(name: TTranslationName, text: string, targetLang: TLanguage): Promise<string> {
     this.resetSymbolsCounter();
 
@@ -135,7 +95,7 @@ export class TranslationService {
       throw new Error('Exceeded symbol limit per hour');
     }
 
-    const cachedTranslation = await this.getTranslationFromDictionary(text, targetLang);
+    const cachedTranslation = await this.translationRepository.getTranslationFromDictionary(text, targetLang);
     if (cachedTranslation) {
       return cachedTranslation;
     }
@@ -161,7 +121,7 @@ export class TranslationService {
         );
 
         const translatedText = response.data.translations[0].text;
-        await this.saveTranslationToDictionary(name, text, translatedText, targetLang);
+        await this.translationRepository.saveTranslationToDictionary(name, text, translatedText, targetLang);
 
         this.symbolsUsed += text.length;
 
