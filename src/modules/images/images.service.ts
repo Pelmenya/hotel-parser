@@ -36,10 +36,10 @@ export class ImagesService {
 
         const imageIsExists = await this.imagesRepository.findOneByHotelIdAndOriginalName(hotel.id, originalName);
         if (!imageIsExists) {
-          await setDelay(80);
           const imagePath = await this.filesService.downloadImage(imageUrl, tempFolderPath, `${uuidv4()}.${fileExtension}`);
 
           if (await this.fileExists(imagePath)) {
+
             const resizedImagePaths = await this.filesService.resizeAndConvertImage(imagePath, sizes, path.join(tempFolderPath, 'resized'));
 
             for (const resizedImagePath of resizedImagePaths) {
@@ -68,7 +68,7 @@ export class ImagesService {
       }
     }
 
-    setTimeout(() => this.filesService.deleteFolder(tempFolderPath), 60000);
+    setTimeout(() => this.filesService.deleteFolder(tempFolderPath), 10000);
   }
 
   private async fileExists(filePath: string): Promise<boolean> {

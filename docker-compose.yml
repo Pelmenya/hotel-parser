@@ -1,3 +1,5 @@
+version: '3.7'
+
 services:
   postgres_postgis_parser:
     image: postgis/postgis
@@ -14,6 +16,11 @@ services:
       - ${POSTGRES_PORT}:5432
     networks:
       - custom_network
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
 
   adminer_pgadmin4_parser:
     image: dpage/pgadmin4
@@ -27,7 +34,12 @@ services:
     volumes:
       - pgadmin_data_parser:/var/lib/pgadmin
     networks:
-      - custom_network 
+      - custom_network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
 
   hotel-parser-1:
     build: ./ 
@@ -71,6 +83,11 @@ services:
     command: sh -c "cd /app; rm -rf dist; npm install; npm run start:dev"
     networks:
       - custom_network
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
 
   hotel-parser-2:
     build: ./ 
@@ -114,6 +131,11 @@ services:
     command: sh -c "cd /app; rm -rf dist; npm install; npm run start:dev"
     networks:
       - custom_network
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
 
   hotel-parser-3:
     build: ./ 
@@ -157,6 +179,11 @@ services:
     command: sh -c "cd /app; rm -rf dist; npm install; npm run start:dev"
     networks:
       - custom_network
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
 
   hotel-parser-4:
     build: ./ 
@@ -200,6 +227,11 @@ services:
     command: sh -c "cd /app; rm -rf dist; npm install; npm run start:dev"
     networks:
       - custom_network
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
 
   hotel-parser-5:
     build: ./ 
@@ -243,6 +275,11 @@ services:
     command: sh -c "cd /app; rm -rf dist; npm install; npm run start:dev"
     networks:
       - custom_network
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
 
   hotel-parser-6:
     build: ./ 
@@ -286,6 +323,11 @@ services:
     command: sh -c "cd /app; rm -rf dist; npm install; npm run start:dev"
     networks:
       - custom_network
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
 
 volumes:
   postgres_data_parser:

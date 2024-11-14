@@ -279,8 +279,9 @@ export class HotelsService {
             await this.hotelsRepository.save(hotel);
 
             if (hotel.page_processed) {
-                setTimeout(() =>
-                    this.filesService.deleteFolder(`pages/hotels/${hotelLinkPart}`), 60000);
+                 setTimeout(() =>
+                    this.filesService.deleteFolder(`pages/hotels/${hotelLinkPart}`),
+                10000);
             }
 
             return { hotel };

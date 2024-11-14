@@ -96,7 +96,7 @@ export class TransportService {
   async checkAxiosIP() {
     try {
       const response = await this.axiosInstance.get('https://api.ipify.org');
-      this.logger.info('Your IP through proxy is:', response.data);
+      this.logger.info(`Your IP through proxy is: ${response.data}`);
     } catch (error) {
       this.logger.error('Error checking IP:', error);
     }
@@ -119,10 +119,10 @@ export class TransportService {
       });
       await page.goto('https://api.ipify.org', { waitUntil: 'networkidle2' });
       const content = await page.evaluate(() => document.body.textContent);
-      this.logger.info('Your IP through Puppeteer proxy is:', content);
+      this.logger.info(`Your IP through Puppeteer proxy is: ${content}` );
       await browser.close();
     } catch (error) {
-      this.logger.error('Puppeteer error:', error);
+      this.logger.error(`Puppeteer error: ${error}`);
     }
   }
 }
