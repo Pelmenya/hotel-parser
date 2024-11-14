@@ -111,13 +111,13 @@ export class HotelsService {
         try {
             const data = await this.filesService.readDataPageRussianHotelsFromJson(district.district_link_ostrovok.split('/')[3], page);
             const $ = cheerio.load(data);
-    
+
             const pagePromises = $('.HotelCard_mainInfo__pNKYU').map(async (index, element) => {
                 const hotel_link_ostrovok = $(element).find('.HotelCard_title__cpfvk').children('a').attr('href') || '';
                 const name = $(element).find('.HotelCard_title__cpfvk').attr('title').trim() || '';
                 const address = $(element).find('.HotelCard_address__AvnV2').text()?.trim() || '';
                 const locations_from: TLocationsFrom[] = [];
-                
+
                 // Используем `await` внутри цикла
                 for (const [idx, el] of $(element).find('.HotelCard_distance__CEiC3').toArray().entries()) {
                     try {
@@ -126,21 +126,21 @@ export class HotelsService {
                         const measurement = distance.replace(String(distanceValue), '') as TDistanceMeasurement;
                         const distance_from = filterSpaces($(el).text().trim()).replace(distance, '');
                         const original = distance_from ? distance_from : '';
-    
+
                         // Ожидание перевода и обработка ошибок
                         let translated = '';
                         if (original) {
                             translated = await this.translationService.translateText('hotel from location', original, 'en');
                         }
-    
+
                         locations_from.push({ idx, measurement, distance_value: distanceValue, original, translated });
                     } catch (translationError) {
                         this.logger.error(`Ошибка перевода для местоположения в отеле ${name}: ${translationError.message}`);
                     }
                 }
-    
+
                 const stars = $(element).find('.Stars_stars__OMmzT').children('.Stars_star__jwPss').length || 0;
-    
+
                 const hotelData = {
                     name,
                     address,
@@ -148,22 +148,22 @@ export class HotelsService {
                     stars,
                     district, // Добавляем район к данным отеля
                 };
-    
+
                 const createdHotel = await this.hotelsRepository.createIfNotExists(hotelData);
                 if (createdHotel) {
                     const headerTitles: TTranslateText = {
                         original: 'Шапка',
                         translated: 'Header'
                     }
-                    const headerGeo: Array<TTranslateText & Partial<TGeoData>> = locations_from.map((geo) => 
-                        ({
-                            idx: geo.idx,
-                            original: geo.original,
-                            translated: geo.translated,
-                            measurement: geo.measurement,
-                            distance_from_hotel: geo.distance_value,
-                            category: geo.original.split(' ')[1] === 'центра' ? 'CENTER' : geo.original.split(' ')[1] === 'метро' ? 'SUBWAY' : 'UNDEFINED'
-                        })
+                    const headerGeo: Array<TTranslateText & Partial<TGeoData>> = locations_from.map((geo) =>
+                    ({
+                        idx: geo.idx,
+                        original: geo.original,
+                        translated: geo.translated,
+                        measurement: geo.measurement,
+                        distance_from_hotel: geo.distance_value,
+                        category: geo.original.split(' ')[1] === 'центра' ? 'CENTER' : geo.original.split(' ')[1] === 'метро' ? 'SUBWAY' : 'UNDEFINED'
+                    })
                     )
                     await this.geoService.saveGeoData(createdHotel.id, headerTitles, headerGeo, 'head');
                     this.logger.info(`Отель создан: ${createdHotel.name}, ${createdHotel.address}`);
@@ -171,7 +171,7 @@ export class HotelsService {
                     this.logger.info(`Отель уже существует: ${name}, ${address}`);
                 }
             }).get();
-    
+
             await Promise.all(pagePromises);
             return true; // Успешная обработка страницы
         } catch (error) {
@@ -179,7 +179,7 @@ export class HotelsService {
             return false; // Неуспешная обработка страницы
         }
     }
-    
+
     async getRussianHotelsByPageAndDistrict(district: string, page: number) {
         return await this.filesService.readDataPageRussianHotelsFromJson(district, page);
     }
@@ -250,19 +250,20 @@ export class HotelsService {
                 this.createHotelImagesFromPage($, hotel),
                 this.createHotelAmenitiesFromPage($, hotel),
                 this.createHotelGeoFromPage($, hotel),
-                this.createHotelPoliciesFromPage($, hotel)
+                this.createHotelPoliciesFromPage($, hotel),
+                this.retryableTranslateHotelName(hotel.name)  // Используем метод с повторными попытками
             ];
 
             try {
-
                 const results = await Promise.all(promises);
-
-                hotel.abouts_processed = results[0].success;
-                hotel.images_processed = results[1].success;
-                hotel.amenities_processed = results[2].success;
-                hotel.geo_processed = results[3].success;
-                hotel.policies_processed = results[4].success;
-
+    
+                hotel.abouts_processed = (results[0] as TSuccess).success;
+                hotel.images_processed = (results[1] as TSuccess).success;
+                hotel.amenities_processed = (results[2] as TSuccess).success;
+                hotel.geo_processed = (results[3] as TSuccess).success;
+                hotel.policies_processed = (results[4] as TSuccess).success;
+                hotel.name_en = results[5] as string;  // Сохраняем переведенное имя отеля
+    
                 this.logger.warn('All parts are processed');
             } catch (error) {
                 this.logger.error(`Error processing hotel ${hotel.id}:`, error);
@@ -272,7 +273,8 @@ export class HotelsService {
                 hotel.images_processed &&
                 hotel.amenities_processed &&
                 hotel.geo_processed &&
-                hotel.policies_processed;
+                hotel.policies_processed &&
+                !!hotel.name_en; // Убедитесь, что имя на английском также обновлено
 
             await this.hotelsRepository.save(hotel);
 
@@ -282,6 +284,27 @@ export class HotelsService {
             }
 
             return { hotel };
+        }
+    }
+
+    private async retryableTranslateHotelName(name: string): Promise<string> {
+        let attempt = 0;
+        const maxAttempts = 3;
+
+        while (attempt < maxAttempts) {
+            try {
+                return await this.openAIService.translateHotelNameToEnglish(name);
+            } catch (error) {
+                this.logger.warn({ message: `Attempt ${attempt + 1} to translate hotel name failed: ${error.message}` });
+                attempt++;
+                if (attempt >= maxAttempts) {
+                    this.logger.error({ message: 'All attempts to translate hotel name failed.' });
+                    throw error;
+                }
+                const delay = Math.min(60000, Math.pow(2, attempt - 1) * 1000);
+                this.logger.log({ level: 'info', message: `Retrying translation in ${delay / 1000} seconds...` });
+                await setDelay(delay);
+            }
         }
     }
 

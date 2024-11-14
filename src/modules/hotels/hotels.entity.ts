@@ -28,6 +28,9 @@ export class Hotels {
   @Column()
   name: string;
 
+  @Column({ nullable: true })
+  name_en: string;
+
   @Column()
   address: string;
 

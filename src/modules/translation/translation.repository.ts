@@ -5,6 +5,7 @@ import { TranslationDictionary } from './translation-dictionary.entity';
 import { TTranslationName } from './translation.types';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { Logger } from 'winston';
+import { TLanguage } from 'src/types/t-language';
 
 @Injectable()
 export class TranslationRepository {
@@ -25,7 +26,7 @@ export class TranslationRepository {
     }
   }
 
-  async saveTranslationToDictionary(name: TTranslationName, originalText: string, translatedText: string, targetLang: string) {
+  async saveTranslationToDictionary(name: TTranslationName, originalText: string, translatedText: string, targetLang: TLanguage) {
     try {
       let translation = await this.translationRepository.findOne({
         where: { original_text: originalText, language: targetLang },

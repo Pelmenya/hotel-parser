@@ -1,9 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 import { TAbout } from '../abouts/abouts.types';
 import { setDelay } from 'src/helpers/delay';
 import { TranslationService } from '../translation/translation.service';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { Logger } from 'winston';
 
 export type TOpenAIDataRes = {
     ru: TAbout;
@@ -12,13 +14,13 @@ export type TOpenAIDataRes = {
 
 @Injectable()
 export class OpenAIService {
-    private readonly logger = new Logger(OpenAIService.name);
     private openAI: OpenAI;
     private openAIModel: string;
 
     constructor(
         private readonly configService: ConfigService,
-        private readonly translationService: TranslationService
+        private readonly translationService: TranslationService,
+        @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
     ) {
         this.openAI = new OpenAI({
             apiKey: this.configService.get('OPENAI_API_KEY'),
@@ -49,7 +51,7 @@ export class OpenAIService {
                     return this.translateFallback(data);
                 }
                 const delay = Math.min(60000, Math.pow(2, attempt - 1) * 1000);
-                this.logger.log(`Retrying in ${delay / 1000} seconds...`);
+                this.logger.warn(`Retrying in ${delay / 1000} seconds...`);
                 await setDelay(delay);
             }
         }
@@ -168,4 +170,25 @@ export class OpenAIService {
 
         return { ru: ruDescription, en: enDescription };
     }
+
+    async translateHotelNameToEnglish(name: string) {
+        const chatCompletion = await this.openAI.chat.completions.create({
+            messages: [{
+                role: 'user',
+                content: `Translate the following hotel name from Russian to English, ensuring that it maintains the original context and appeal. Only provide the translated name without any additional text: \"{${name}}\".`
+            }],
+            model: this.openAIModel,
+            temperature: 0.7,
+            max_tokens: 1500,
+        });
+
+        const translatedName = chatCompletion.choices[0].message.content.replace(/^\s+|\s+$/g, '').replace(/^["']|["']$/g, '');
+
+        await this.translationService.saveTranslationToDictionary('hotel name', name, translatedName, 'en');
+
+        return translatedName;
+
+    }
+
+
 }

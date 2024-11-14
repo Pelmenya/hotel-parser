@@ -136,4 +136,14 @@ export class TranslationService {
       }
     });
   }
+
+  async saveTranslationToDictionary (name: TTranslationName, originalText: string, translatedText: string, targetLang: TLanguage) {
+    
+    const cachedTranslation = await this.translationRepository.getTranslationFromDictionary(originalText, targetLang);
+    if (cachedTranslation) {
+      return cachedTranslation;
+    }
+
+    return await this.translationRepository.saveTranslationToDictionary(name, originalText, translatedText, targetLang);
+  }
 }
