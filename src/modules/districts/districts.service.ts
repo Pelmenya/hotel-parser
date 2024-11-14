@@ -1,14 +1,16 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DistrictsRepository } from './districts.repository';
 import { FilesService } from '../files/files.service';
 import { ParserService } from '../parser/parser.service'; // Импортируем ParserService
 import * as cheerio from 'cheerio';
 import { TSuccess } from 'src/types/t-success';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { Logger } from 'winston';
+
 
 @Injectable()
 export class DistrictsService {
-    private readonly logger = new Logger(DistrictsService.name);
     private readonly instanceId: number;
     private readonly totalInstances: number;
 
@@ -17,6 +19,7 @@ export class DistrictsService {
         private readonly districtsRepository: DistrictsRepository,
         private readonly filesService: FilesService,
         private readonly parserService: ParserService, // Добавляем зависимость ParserService
+        @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
     ) {
         this.instanceId = this.configService.get<number>('INSTANCE_ID');
         this.totalInstances = this.configService.get<number>('TOTAL_INSTANCES');
@@ -47,7 +50,7 @@ export class DistrictsService {
                         await this.districtsRepository.create(districtData);
                         districts.push(districtData);
                     } else {
-                        this.logger.log(`District already exists: ${name}, ${district_link_ostrovok}`);
+                        this.logger.info(`District already exists: ${name}, ${district_link_ostrovok}`);
                     }
                 }).get();
 
@@ -63,10 +66,10 @@ export class DistrictsService {
                 batchPromises.push(parseAndStoreDistrictsFromPage(i + j + 1));
             }
             await Promise.all(batchPromises);
-            this.logger.log(`Processed batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(totalPages / batchSize)}`);
+            this.logger.info(`Processed batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(totalPages / batchSize)}`);
         }
 
-        this.logger.log('All pages processing completed');
+        this.logger.info('All pages processing completed');
         setTimeout(() => this.filesService.deleteFolder('pages'), 2000);
         return districts;
     }
@@ -84,7 +87,7 @@ export class DistrictsService {
                 }
             }
 
-            this.logger.log(`Processed ${districtsToProcess.length} districts.`);
+            this.logger.info(`Processed ${districtsToProcess.length} districts.`);
         } catch (error) {
             this.logger.error('Error processing all districts:', error);
         }
@@ -92,23 +95,23 @@ export class DistrictsService {
 
     async saveDistrictPages(districtLink: string) {
         const districtData = await this.districtsRepository.findByLink(districtLink);
-    
+
         if (!districtData || districtData.count_pages <= 0) {
             this.logger.error(`No data for district ${districtLink}`);
             return;
         }
-    
+
         const { count_pages, id, processed_pages = [] } = districtData;
         const processedPagesNumeric = processed_pages.map(Number);
-    
+
         const pagesToProcess = Array.from({ length: count_pages }, (_, i) => i + 1)
-            .filter(page => 
-                (page - 1) % this.totalInstances === this.instanceId - 1 && 
+            .filter(page =>
+                (page - 1) % this.totalInstances === this.instanceId - 1 &&
                 !processedPagesNumeric.includes(page)
             );
-    
+
         if (pagesToProcess.length === 0) {
-            this.logger.log(`All pages for district ${districtLink} are already processed.`);
+            this.logger.info(`All pages for district ${districtLink} are already processed.`);
             return;
         }
 
@@ -119,22 +122,22 @@ export class DistrictsService {
                     this.logger.error(`Error processing page ${page} of district ${districtLink}:`, data.message);
                     continue;
                 }
-    
+
                 // Обновляем массив только после успешной обработки страницы
                 const updatedProcessedPages = [...processedPagesNumeric, page];
                 await this.districtsRepository.updateProcessedPages(id, updatedProcessedPages);
                 processedPagesNumeric.push(page); // Локально обновляем массив для последующих итераций
-    
+
                 if (updatedProcessedPages.length === count_pages) {
                     await this.districtsRepository.updateAllPagesLoaded(id, true);
-                    this.logger.log(`All pages for district ${districtLink} are processed and loaded.`);
+                    this.logger.info(`All pages for district ${districtLink} are processed and loaded.`);
                 }
             } catch (error) {
                 this.logger.error(`Error processing page ${page} of district ${districtLink}:`, error);
             }
         }
     }
-        
+
     async saveDistrictPage(page: number, districtLink: string) {
         const data = await this.parserService.parsePage(`/${districtLink.split('/')[3]}/?page=${page}`);
         if (data.error) {
@@ -211,7 +214,7 @@ export class DistrictsService {
 
                     if (!isNaN(count_pages)) {
                         await this.districtsRepository.updateCountPages(district.id, count_pages, region, count_hotels);
-                        this.logger.log(`Updated district "${name}" with pages: ${count_pages} and region: ${region} hotels: ${count_hotels}`);
+                        this.logger.info(`Updated district "${name}" with pages: ${count_pages} and region: ${region} hotels: ${count_hotels}`);
                     } else {
                         this.logger.warn(`Failed to parse count_pages for district "${name}", received: ${count_pages}`);
                     }
@@ -219,12 +222,12 @@ export class DistrictsService {
                     this.logger.error(`Error updating district "${name}":`, error);
                 }
             }
-            this.logger.log(`Update of ${filteredDistricts.length} records completed.`);
+            this.logger.info(`Update of ${filteredDistricts.length} records completed.`);
         } catch (error) {
             this.logger.error('Error updating records:', error);
         }
     }
-// методы основных страниц с districts
+    // методы основных страниц с districts
     async saveMainPage(page: number): Promise<TSuccess> {
         const data = await this.parserService.parsePage(`?page=${page}`);
         if (data.error) {
@@ -241,7 +244,7 @@ export class DistrictsService {
             } catch (error) {
                 this.logger.error('Error save main page', i, ':', error);
             }
-    }
+        }
         return { success: true };
     }
 

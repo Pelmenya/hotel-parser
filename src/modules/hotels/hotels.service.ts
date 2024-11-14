@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HotelsRepository } from './hotels.repository';
 import { FilesService } from '../files/files.service';
@@ -25,11 +25,12 @@ import { PoliciesService } from '../policies/policies.service';
 import { setDelay } from 'src/helpers/delay';
 import { TLocationsFrom } from 'src/types/t-locations-from';
 import { TDistanceMeasurement } from 'src/types/t-distance-measurement';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { Logger } from 'winston';
 
 
 @Injectable()
 export class HotelsService {
-    private readonly logger = new Logger(HotelsService.name);
     private readonly instanceId: number;
     private readonly totalInstances: number;
 
@@ -46,7 +47,7 @@ export class HotelsService {
         private readonly translationService: TranslationService,
         private readonly geoService: GeoService,
         private readonly policiesService: PoliciesService,
-
+        @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
     ) {
         this.instanceId = this.configService.get<number>('INSTANCE_ID');
         this.totalInstances = this.configService.get<number>('TOTAL_INSTANCES');
@@ -66,7 +67,7 @@ export class HotelsService {
                 }
             }
 
-            this.logger.log(`Processed hotels for ${districtsToProcess.length} districts.`);
+            this.logger.info(`Processed hotels for ${districtsToProcess.length} districts.`);
         } catch (error) {
             this.logger.error('Error processing all hotels:', error.stack);
         }
@@ -87,7 +88,7 @@ export class HotelsService {
             );
 
         if (pagesToProcess.length === 0) {
-            this.logger.log(`All pages for district ${districtLink} are already processed.`);
+            this.logger.info(`All pages for district ${districtLink} are already processed.`);
             return;
         }
 
@@ -165,9 +166,9 @@ export class HotelsService {
                         })
                     )
                     await this.geoService.saveGeoData(createdHotel.id, headerTitles, headerGeo, 'head');
-                    this.logger.log(`Отель создан: ${createdHotel.name}, ${createdHotel.address}`);
+                    this.logger.info(`Отель создан: ${createdHotel.name}, ${createdHotel.address}`);
                 } else {
-                    this.logger.log(`Отель уже существует: ${name}, ${address}`);
+                    this.logger.info(`Отель уже существует: ${name}, ${address}`);
                 }
             }).get();
     
@@ -198,12 +199,12 @@ export class HotelsService {
     }
 
     async saveHotelsPages(batchSize: number) {
-        this.logger.log(`Instance ${this.instanceId} is starting to process hotel pages.`);
+        this.logger.info(`Instance ${this.instanceId} is starting to process hotel pages.`);
 
         const hotelsToProcess = await this.hotelsRepository.lockHotelsForProcessing(this.instanceId, batchSize);
 
         if (hotelsToProcess.length === 0) {
-            this.logger.log(`No more hotel pages to load.`);
+            this.logger.info(`No more hotel pages to load.`);
             return;
         }
 
@@ -222,7 +223,7 @@ export class HotelsService {
             }
         }
 
-        this.logger.log(`Instance ${this.instanceId} processed ${hotelsToProcess.length} hotel pages.`);
+        this.logger.info(`Instance ${this.instanceId} processed ${hotelsToProcess.length} hotel pages.`);
     }
 
     async getDataHotelFromJson(hotelLink: string) {

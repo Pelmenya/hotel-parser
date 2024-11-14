@@ -1,10 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SocksProxyAgent } from 'socks-proxy-agent';
 import axios, { AxiosInstance } from 'axios';
 import * as puppeteer from 'puppeteer';
 // S3Client и команды из AWS SDK v3
 import { S3Client } from '@aws-sdk/client-s3';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
+import { Logger } from 'winston';
+
 
 export type TTransportLoadContent = 'puppeteer' | 'axios';
 
@@ -20,7 +23,10 @@ export class TransportService {
   private proxyHost: string;
   private proxyPort: string;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
+  ) {
     this.proxyHost = this.configService.get('PROXY_HOST');
     this.proxyPort = this.configService.get('PROXY_PORT');
     this.proxyUsername = this.configService.get('PROXY_LOGIN');
@@ -90,9 +96,9 @@ export class TransportService {
   async checkAxiosIP() {
     try {
       const response = await this.axiosInstance.get('https://api.ipify.org');
-      console.log('Your IP through proxy is:', response.data);
+      this.logger.info('Your IP through proxy is:', response.data);
     } catch (error) {
-      console.error('Error checking IP:', error);
+      this.logger.error('Error checking IP:', error);
     }
   }
 
@@ -113,10 +119,10 @@ export class TransportService {
       });
       await page.goto('https://api.ipify.org', { waitUntil: 'networkidle2' });
       const content = await page.evaluate(() => document.body.textContent);
-      console.log('Your IP through Puppeteer proxy is:', content);
+      this.logger.info('Your IP through Puppeteer proxy is:', content);
       await browser.close();
     } catch (error) {
-      console.error('Puppeteer error:', error);
+      this.logger.error('Puppeteer error:', error);
     }
   }
 }

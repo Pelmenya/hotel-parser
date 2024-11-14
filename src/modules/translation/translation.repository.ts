@@ -9,7 +9,7 @@ import { Logger } from 'winston';
 @Injectable()
 export class TranslationRepository {
 
-  constructor(
+    constructor(
     @InjectRepository(TranslationDictionary)
     private readonly translationRepository: Repository<TranslationDictionary>,
     @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
