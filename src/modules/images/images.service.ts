@@ -67,8 +67,7 @@ export class ImagesService {
         this.logger.error('Ошибка при обработке изображения:', { imageUrl, error });
       }
     }
-
-    setTimeout(() => this.filesService.deleteFolder(tempFolderPath), 10000);
+   
   }
 
   private async fileExists(filePath: string): Promise<boolean> {
