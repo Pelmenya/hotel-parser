@@ -53,7 +53,7 @@ export class HotelsService {
     ) {
         this.instanceId = this.configService.get<number>('INSTANCE_ID');
         this.totalInstances = this.configService.get<number>('TOTAL_INSTANCES');
-        //this.processLockedHotels();
+        this.processLockedHotels();
     }
 
     async checkRunFlag(): Promise<boolean> {
