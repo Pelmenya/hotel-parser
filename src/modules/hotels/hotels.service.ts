@@ -53,6 +53,11 @@ export class HotelsService {
     ) {
         this.instanceId = this.configService.get<number>('INSTANCE_ID');
         this.totalInstances = this.configService.get<number>('TOTAL_INSTANCES');
+        //this.processLockedHotels();
+    }
+
+    async checkRunFlag(): Promise<boolean> {
+        return this.settingsService.getRunFlag();
     }
 
     async processAllHotels() {
@@ -200,32 +205,68 @@ export class HotelsService {
         return data;
     }
 
-    async saveHotelsPages(batchSize: number) {
-        this.logger.info(`Instance ${this.instanceId} is starting to process hotel pages.`);
-
-        const hotelsToProcess = await this.hotelsRepository.lockHotelsForProcessing(this.instanceId, batchSize);
-
-        if (hotelsToProcess.length === 0) {
-            this.logger.info(`No more hotel pages to load.`);
-            return;
-        }
-
-        for (const hotel of hotelsToProcess) {
+    async processLockedHotels() {
+        this.logger.info(`Instance ${this.instanceId} is starting to process locked hotel pages.`);
+        
+        const lockedHotels = await this.hotelsRepository.findLockedByInstance(String(this.instanceId));
+    
+        for (const hotel of lockedHotels) {
             try {
                 await this.saveHotelPage(hotel.id, hotel.hotel_link_ostrovok);
                 await this.extractAndStoreHotelFromPage(hotel.id);
-
+    
                 // Снимаем блокировку и отмечаем страницу как загруженную после успешной обработки
                 await this.hotelsRepository.updateHotelPageLoaded(hotel.id, true);
             } catch (error) {
-                this.logger.error(`Error processing hotel with ID ${hotel.id}:`, error.stack);
+                this.logger.error(`Error processing locked hotel with ID ${hotel.id}:`, error.stack);
             } finally {
                 // Снимаем блокировку в любом случае
                 await this.hotelsRepository.unlockHotel(hotel.id);
             }
         }
+    
+        this.logger.info(`Instance ${this.instanceId} processed locked hotel pages.`);
+        
+        const shouldRun = await this.checkRunFlag();
+        
+        if (shouldRun) this.saveHotelsPages(10);
+    }
 
-        this.logger.info(`Instance ${this.instanceId} processed ${hotelsToProcess.length} hotel pages.`);
+    async saveHotelsPages(batchSize: number) {
+        while (true) {
+            const shouldRun = await this.checkRunFlag();
+    
+            if (!shouldRun) {
+                this.logger.info(`Run flag is false. Stopping processing.`);
+                break;
+            }
+    
+            this.logger.info(`Instance ${this.instanceId} is starting to process hotel pages.`);
+    
+            const hotelsToProcess = await this.hotelsRepository.lockHotelsForProcessing(this.instanceId, batchSize);
+    
+            if (hotelsToProcess.length === 0) {
+                this.logger.info(`No more hotel pages to load.`);
+                break;
+            }
+    
+            for (const hotel of hotelsToProcess) {
+                try {
+                    await this.saveHotelPage(hotel.id, hotel.hotel_link_ostrovok);
+                    await this.extractAndStoreHotelFromPage(hotel.id);
+    
+                    // Снимаем блокировку и отмечаем страницу как загруженную после успешной обработки
+                    await this.hotelsRepository.updateHotelPageLoaded(hotel.id, true);
+                } catch (error) {
+                    this.logger.error(`Error processing hotel with ID ${hotel.id}:`, error.stack);
+                } finally {
+                    // Снимаем блокировку в любом случае
+                    await this.hotelsRepository.unlockHotel(hotel.id);
+                }
+            }
+    
+            this.logger.info(`Instance ${this.instanceId} processed ${hotelsToProcess.length} hotel pages.`);
+        }
     }
 
     async getDataHotelFromJson(hotelLink: string) {

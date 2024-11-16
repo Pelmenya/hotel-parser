@@ -91,4 +91,8 @@ export class HotelsRepository {
     async unlockHotel(id: string): Promise<void> {
         await this.hotelsRepository.update(id, { locked_by: null });
     }
+
+    async findLockedByInstance(instanceId: string) {
+        return this.hotelsRepository.find({ where: { locked_by: instanceId } });
+    }
 }

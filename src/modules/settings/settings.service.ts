@@ -5,7 +5,6 @@ import { SettingsRepository } from './settings.repository';
 @Injectable()
 export class SettingsService {
   constructor(
-    @InjectRepository(SettingsRepository)
     private readonly settingsRepository: SettingsRepository,
   ) {}
 
@@ -15,6 +14,6 @@ export class SettingsService {
   }
 
   async setRunFlag(value: boolean): Promise<void> {
-    await this.settingsRepository.updateSetting('run', value.toString());
+    await this.settingsRepository.updateSetting('run', String(value));
   }
 }
