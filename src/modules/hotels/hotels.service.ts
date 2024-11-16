@@ -278,6 +278,11 @@ export class HotelsService {
 
             await this.hotelsRepository.save(hotel);
 
+            if (hotel.page_processed) {
+                await this.filesService.deleteFolder(`pages/hotels/${hotelLinkPart}`);
+
+           }
+
             return { hotel };
         }
     }

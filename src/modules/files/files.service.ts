@@ -8,15 +8,34 @@ import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { setDelay } from 'src/helpers/delay';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { Logger } from 'winston';
+import Bottleneck from 'bottleneck';
 
 @Injectable()
 export class FilesService {
   private bucketName: string;
 
+  private requestCount: number;
+  private startTime: number | null = null;
+
+/*   private limiter = new Bottleneck({
+    reservoir: 79, // Максимум 79 запросов в минуту
+    reservoirRefreshAmount: 79, // Восстановление резервуара до 79 запросов
+    reservoirRefreshInterval: 60000, // Интервал восстановления - 1 минута (60,000 ms)
+    minTime: 760, // Минимальное время между запросами - 760 ms (60000 ms / 79)
+  });
+ */  
+  private limiter = new Bottleneck({
+    reservoir: 54, // Максимум 54 запроса в минуту
+    reservoirRefreshAmount: 54, // Восстановление резервуара до 54 запросов
+    reservoirRefreshInterval: 60000, // Интервал восстановления - 1 минута (60,000 ms)
+    minTime: 1125, // Минимальное время между запросами - примерно 1125 ms (1000 ms / 0.89)
+  });
+    
   constructor(
     private readonly transportService: TransportService,
     @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
   ) {
+    this.requestCount = 0;
     this.bucketName = this.transportService.getBucket();
   }
 
@@ -43,7 +62,12 @@ export class FilesService {
       return await axiosInstance.get(url);
     } catch (error) {
       if (retries > 0) {
-        this.logger.warn(`Ошибка при скачивании изображения. Повтор через ${delay} мс. Осталось попыток: ${retries}`);
+        const elapsedTime = Date.now() - this.startTime;
+        this.logger.error('Ошибка при обработке изображения:', { url, error });
+        this.logger.error(`Количество успешных запросов до ошибки: ${this.requestCount}`);
+        this.logger.error(`Время выполнения до ошибки: ${elapsedTime} мс`);
+        this.logger.error(`Ошибка при скачивании изображения. Повтор через ${delay} мс. Осталось попыток: ${retries}`, {error});
+        this.startTime = null;
         await setDelay(delay);
         return this.fetchWithRetry(url, retries - 1, delay * 2);
       } else {
@@ -53,9 +77,17 @@ export class FilesService {
   }
 
   async downloadImage(url: string, folderPath: string, filename: string): Promise<string> {
+    if (!this.startTime) {
+      this.startTime = Date.now(); // Начало отсчета времени
+    }
+    return this.limiter.schedule(() => this._downloadImage(url, folderPath, filename));
+  }
+
+  private async _downloadImage(url: string, folderPath: string, filename: string): Promise<string> {
     if (!filename) {
       throw new Error('Некорректный URL');
     }
+
     const fullFolderPath = join(__dirname, '..', 'uploads', folderPath || '');
 
     try {
@@ -73,14 +105,23 @@ export class FilesService {
       response.data.pipe(writer);
 
       return new Promise((resolve, reject) => {
-        writer.on('finish', () => resolve(path));
+        writer.on('finish', () => {
+          this.requestCount++; // Увеличиваем счетчик при успешной загрузке
+          resolve(path);
+        });
         writer.on('error', (error) => {
           this.logger.error('Ошибка при записи файла:', { error });
           reject(error);
         });
       });
     } catch (error) {
+      const elapsedTime = Date.now() - this.startTime;
+      this.logger.error(`Количество успешных запросов до ошибки : ${this.requestCount} за ${elapsedTime} мс`);
       this.logger.error('Ошибка при скачивании изображения:', { error });
+      this.logger.error(`Количество успешных запросов до ошибки: ${this.requestCount}`);
+      this.logger.error(`Время выполнения до ошибки: ${elapsedTime} мс`);
+      this.startTime = null;
+
       try {
         await fsPromises.unlink(path);
       } catch (unlinkError) {

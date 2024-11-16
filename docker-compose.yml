@@ -20,7 +20,7 @@ services:
       resources:
         limits:
           cpus: '1.0'
-          memory: 1G
+          memory: 2G
 
   adminer_pgadmin4_parser:
     image: dpage/pgadmin4
@@ -48,6 +48,7 @@ services:
       - .:/app
       - /app/node_modules
       - ./logs:/app/logs
+      - uploads:/app/uploads
     ports:
       - ${DEV_PORT_1}:3000
     depends_on:
@@ -86,9 +87,9 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '2.0'
+          cpus: '1.6'
           memory: 2G
-    restart: on-failure # эта строка добавляет автоматический перезапуск только в случае неудачного завершения (возврат кода ошибки не равен 0).
+    restart: always # эта строка добавляет автоматический перезапуск
 
   hotel-parser-2:
     build: ./ 
@@ -97,6 +98,7 @@ services:
       - .:/app
       - /app/node_modules
       - ./logs:/app/logs
+      - uploads:/app/uploads
     ports:
       - ${DEV_PORT_2}:3000
     depends_on:
@@ -135,9 +137,9 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '2.0'
+          cpus: '1.6'
           memory: 2G
-    restart: on-failure # эта строка добавляет автоматический перезапуск только в случае неудачного завершения (возврат кода ошибки не равен 0).
+    restart: always
 
   hotel-parser-3:
     build: ./ 
@@ -146,6 +148,7 @@ services:
       - .:/app
       - /app/node_modules
       - ./logs:/app/logs
+      - uploads:/app/uploads
     ports:
       - ${DEV_PORT_3}:3000
     depends_on:
@@ -184,9 +187,9 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '2.0'
+          cpus: '1.6'
           memory: 2G
-    restart: on-failure # эта строка добавляет автоматический перезапуск только в случае неудачного завершения (возврат кода ошибки не равен 0).
+    restart: always
 
   hotel-parser-4:
     build: ./ 
@@ -195,6 +198,7 @@ services:
       - .:/app
       - /app/node_modules
       - ./logs:/app/logs
+      - uploads:/app/uploads
     ports:
       - ${DEV_PORT_4}:3000
     depends_on:
@@ -233,9 +237,9 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '2.0'
+          cpus: '1.6'
           memory: 2G
-    restart: on-failure # эта строка добавляет автоматический перезапуск только в случае неудачного завершения (возврат кода ошибки не равен 0).
+    restart: always
 
   hotel-parser-5:
     build: ./ 
@@ -244,6 +248,7 @@ services:
       - .:/app
       - /app/node_modules
       - ./logs:/app/logs
+      - uploads:/app/uploads
     ports:
       - ${DEV_PORT_5}:3000
     depends_on:
@@ -282,9 +287,9 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '2.0'
+          cpus: '1.6'
           memory: 2G
-    restart: on-failure # эта строка добавляет автоматический перезапуск только в случае неудачного завершения (возврат кода ошибки не равен 0).
+    restart: always
 
   hotel-parser-6:
     build: ./ 
@@ -293,6 +298,7 @@ services:
       - .:/app
       - /app/node_modules
       - ./logs:/app/logs
+      - uploads:/app/uploads
     ports:
       - ${DEV_PORT_6}:3000
     depends_on:
@@ -331,13 +337,14 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '2.0'
+          cpus: '1.6'
           memory: 2G
-    restart: on-failure # эта строка добавляет автоматический перезапуск только в случае неудачного завершения (возврат кода ошибки не равен 0).
+    restart: always
 
 volumes:
   postgres_data_parser:
   pgadmin_data_parser:
+  uploads: 
 
 networks:
   custom_network:

@@ -12,17 +12,24 @@ import { Logger } from 'winston';
 
 @Injectable()
 export class ImagesService {
+  private requestCount: number;
+  private startTime: number;
+
   constructor(
     private readonly filesService: FilesService,
     private readonly imagesRepository: ImagesRepository,
     @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
-  ) {}
+  ) {
+    this.requestCount = 0;
+  }
 
   async processAndSaveImages(
     imageUrls: string[],
     type: 'main' | 'additional' = 'additional',
     hotel: Hotels
   ): Promise<void> {
+    this.startTime = Date.now(); // Начало отсчета времени
+
     const sizes: { width: TImageWidth, height: TImageHeight; name: TImageSize }[] = [
       { width: 828, height: 560, name: 'medium' },
       { width: 240, height: 240, name: 'thumbnail' }
@@ -36,9 +43,13 @@ export class ImagesService {
 
         const imageIsExists = await this.imagesRepository.findOneByHotelIdAndOriginalName(hotel.id, originalName);
         if (!imageIsExists) {
+          
+          //await setDelay(80);
+          
           const imagePath = await this.filesService.downloadImage(imageUrl, tempFolderPath, `${uuidv4()}.${fileExtension}`);
 
           if (await this.fileExists(imagePath)) {
+            this.requestCount++; // Увеличиваем счетчик успешных загрузок
 
             const resizedImagePaths = await this.filesService.resizeAndConvertImage(imagePath, sizes, path.join(tempFolderPath, 'resized'));
 
@@ -64,10 +75,14 @@ export class ImagesService {
           }
         }
       } catch (error) {
+        const elapsedTime = Date.now() - this.startTime;
         this.logger.error('Ошибка при обработке изображения:', { imageUrl, error });
+        this.logger.error(`Количество успешных запросов до ошибки: ${this.requestCount}`);
+        this.logger.error(`Время выполнения до ошибки: ${elapsedTime} мс`);
       }
     }
-   
+
+    await this.filesService.deleteFolder(tempFolderPath);
   }
 
   private async fileExists(filePath: string): Promise<boolean> {
