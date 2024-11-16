@@ -14,6 +14,7 @@ import { AmenitiesModule } from '../amenities/amenities.module';
 import { TranslationModule } from '../translation/translation.module';
 import { GeoModule } from '../geo/geo.module';
 import { PoliciesModule } from '../policies/policies.module';
+import { SettingsModule } from '../settings/settings.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { PoliciesModule } from '../policies/policies.module';
     TranslationModule,
     GeoModule,  
     PoliciesModule,
+    SettingsModule
   ],
   providers: [
     HotelsRepository, 

@@ -8,6 +8,7 @@ import { Amenities } from 'src/modules/amenities/amenities.entity';
 import { GeoData } from 'src/modules/geo/geo-data.entity';
 import { Policies } from 'src/modules/policies/policies.entity';
 import { Images } from 'src/modules/images/images.entity';
+import { Settings } from 'src/modules/settings/settings.entity';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -25,7 +26,8 @@ export const AppDataSource = new DataSource({
     Abouts,
     Amenities,
     GeoData,
-    Policies
+    Policies,
+    Settings
   ],  // Укажите ваши сущности здесь
   migrations: ['app/src/migrations/*{.ts,.js}'],
   synchronize: true,

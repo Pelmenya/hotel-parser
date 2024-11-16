@@ -27,6 +27,7 @@ import { TLocationsFrom } from 'src/types/t-locations-from';
 import { TDistanceMeasurement } from 'src/types/t-distance-measurement';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { Logger } from 'winston';
+import { SettingsService } from '../settings/settings.service';
 
 
 @Injectable()
@@ -47,6 +48,7 @@ export class HotelsService {
         private readonly translationService: TranslationService,
         private readonly geoService: GeoService,
         private readonly policiesService: PoliciesService,
+        private readonly settingsService: SettingsService,
         @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
     ) {
         this.instanceId = this.configService.get<number>('INSTANCE_ID');

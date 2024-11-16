@@ -17,6 +17,7 @@ import { OpenaiModule } from './modules/openai/openai.module';
 import { TranslationModule } from './modules/translation/translation.module';
 import { PoliciesModule } from './modules/policies/policies.module';
 import { LoggerModule } from './modules/logger/logger.module';
+import { SettingsModule } from './modules/settings/settings.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { LoggerModule } from './modules/logger/logger.module';
     TranslationModule,
     PoliciesModule,
     LoggerModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
