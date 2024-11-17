@@ -17,20 +17,13 @@ export class FilesService {
   private requestCount: number;
   private startTime: number | null = null;
 
-/*   private limiter = new Bottleneck({
+  private limiter = new Bottleneck({
     reservoir: 79, // Максимум 79 запросов в минуту
     reservoirRefreshAmount: 79, // Восстановление резервуара до 79 запросов
     reservoirRefreshInterval: 60000, // Интервал восстановления - 1 минута (60,000 ms)
     minTime: 760, // Минимальное время между запросами - 760 ms (60000 ms / 79)
   });
- */  
-  private limiter = new Bottleneck({
-    reservoir: 54, // Максимум 54 запроса в минуту
-    reservoirRefreshAmount: 54, // Восстановление резервуара до 54 запросов
-    reservoirRefreshInterval: 60000, // Интервал восстановления - 1 минута (60,000 ms)
-    minTime: 1125, // Минимальное время между запросами - примерно 1125 ms (1000 ms / 0.89)
-  });
-    
+
   constructor(
     private readonly transportService: TransportService,
     @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
@@ -59,15 +52,26 @@ export class FilesService {
   private async fetchWithRetry(url: string, retries: number, delay: number): Promise<any> {
     try {
       const axiosInstance = this.transportService.getAxiosInstance('stream');
-      return await axiosInstance.get(url);
+      const response = await axiosInstance.get(url);
+
+      // Проверка на корректность ответа
+      if (!response || !response.data) {
+        throw new Error('Некорректный ответ от сервера');
+      }
+
+      return response;
+
     } catch (error) {
+
+      const elapsedTime = Date.now() - this.startTime;
+      this.logger.error(`Ошибка при запросе: ${url} ERROR: ${error.message}`);
+      this.logger.error(`Количество успешных запросов до ошибки: ${this.requestCount}`);
+      this.logger.error(`Время выполнения до ошибки: ${elapsedTime} мс`);
+      this.logger.error(`Ошибка при скачивании изображения. Повтор через ${delay} мс. Осталось попыток: ${retries}`);
+      this.startTime = null;
+      this.requestCount = 0;
+
       if (retries > 0) {
-        const elapsedTime = Date.now() - this.startTime;
-        this.logger.error('Ошибка при обработке изображения:', { url, error });
-        this.logger.error(`Количество успешных запросов до ошибки: ${this.requestCount}`);
-        this.logger.error(`Время выполнения до ошибки: ${elapsedTime} мс`);
-        this.logger.error(`Ошибка при скачивании изображения. Повтор через ${delay} мс. Осталось попыток: ${retries}`, {error});
-        this.startTime = null;
         await setDelay(delay);
         return this.fetchWithRetry(url, retries - 1, delay * 2);
       } else {
@@ -121,6 +125,7 @@ export class FilesService {
       this.logger.error(`Количество успешных запросов до ошибки: ${this.requestCount}`);
       this.logger.error(`Время выполнения до ошибки: ${elapsedTime} мс`);
       this.startTime = null;
+      this.requestCount = 0;
 
       try {
         await fsPromises.unlink(path);
