@@ -87,7 +87,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.6'
+          cpus: '1.2'
           memory: 2G
     restart: always # эта строка добавляет автоматический перезапуск
 
@@ -137,7 +137,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.6'
+          cpus: '1.2'
           memory: 2G
     restart: always
 
@@ -187,7 +187,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.6'
+          cpus: '1.2'
           memory: 2G
     restart: always
 
@@ -237,7 +237,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.6'
+          cpus: '1.2'
           memory: 2G
     restart: always
 
@@ -287,7 +287,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.6'
+          cpus: '1.2'
           memory: 2G
     restart: always
 
@@ -337,7 +337,107 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.6'
+          cpus: '1.2'
+          memory: 2G
+    restart: always
+
+  hotel-parser-7:
+    build: ./ 
+    container_name: hotel-parser-7
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - ./logs:/app/logs
+      - uploads:/app/uploads
+    ports:
+      - ${DEV_PORT_7}:3000
+    depends_on:
+      - postgres_postgis_parser
+    environment:
+      PORT: ${DEV_PORT_7}
+      SECRET: ${SECRET}
+      IS_DEV: "true"
+      BASE_PARSE_URL: ${BASE_PARSE_URL}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      INSTANCE_ID: ${INSTANCE_ID_7}
+      TOTAL_INSTANCES: ${TOTAL_INSTANCES}
+      PROXY_HOST: ${PROXY_HOST_7}
+      PROXY_PORT: ${PROXY_PORT_7}
+      PROXY_LOGIN: ${PROXY_LOGIN_7}
+      PROXY_PASSWORD: ${PROXY_PASSWORD_7}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_BASE_API_URL: ${OPENAI_BASE_API_URL}
+      OPENAI_MODEL: ${OPENAI_MODEL}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+      S3_ENDPOINT: ${S3_ENDPOINT}
+      S3_BUCKET: ${S3_BUCKET}
+      YA_FOLDER_ID: ${YA_FOLDER_ID}
+      IAM_TOKEN_URL: ${IAM_TOKEN_URL}
+      TRANSLATE_API_URL: ${TRANSLATE_API_URL}
+      KEY_FILE_PATH: ${KEY_FILE_PATH}
+    working_dir: /app
+    command: sh -c "cd /app; rm -rf dist; npm install; npm run start:dev"
+    networks:
+      - custom_network
+    deploy:
+      resources:
+        limits:
+          cpus: '1.2'
+          memory: 2G
+    restart: always
+
+  hotel-parser-8:
+    build: ./ 
+    container_name: hotel-parser-8
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - ./logs:/app/logs
+      - uploads:/app/uploads
+    ports:
+      - ${DEV_PORT_8}:3000
+    depends_on:
+      - postgres_postgis_parser
+    environment:
+      PORT: ${DEV_PORT_8}
+      SECRET: ${SECRET}
+      IS_DEV: "true"
+      BASE_PARSE_URL: ${BASE_PARSE_URL}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      INSTANCE_ID: ${INSTANCE_ID_8}
+      TOTAL_INSTANCES: ${TOTAL_INSTANCES}
+      PROXY_HOST: ${PROXY_HOST_8}
+      PROXY_PORT: ${PROXY_PORT_8}
+      PROXY_LOGIN: ${PROXY_LOGIN_8}
+      PROXY_PASSWORD: ${PROXY_PASSWORD_8}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_BASE_API_URL: ${OPENAI_BASE_API_URL}
+      OPENAI_MODEL: ${OPENAI_MODEL}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+      S3_ENDPOINT: ${S3_ENDPOINT}
+      S3_BUCKET: ${S3_BUCKET}
+      YA_FOLDER_ID: ${YA_FOLDER_ID}
+      IAM_TOKEN_URL: ${IAM_TOKEN_URL}
+      TRANSLATE_API_URL: ${TRANSLATE_API_URL}
+      KEY_FILE_PATH: ${KEY_FILE_PATH}
+    working_dir: /app
+    command: sh -c "cd /app; rm -rf dist; npm install; npm run start:dev"
+    networks:
+      - custom_network
+    deploy:
+      resources:
+        limits:
+          cpus: '1.2'
           memory: 2G
     restart: always
 

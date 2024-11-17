@@ -230,7 +230,6 @@ export class HotelsService {
         const shouldRun = await this.checkRunFlag();
 
         if (shouldRun) {
-            await setDelay(1000);
             await this.saveHotelsPages(5);
         }
     }

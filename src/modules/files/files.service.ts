@@ -18,10 +18,10 @@ export class FilesService {
   private startTime: number | null = null;
 
   private limiter = new Bottleneck({
-    reservoir: 79, // Максимум 79 запросов в минуту
-    reservoirRefreshAmount: 79, // Восстановление резервуара до 79 запросов
+    reservoir: 40, // Максимум 40 запросов в минуту
+    reservoirRefreshAmount: 40, // Восстановление резервуара до 40 запросов
     reservoirRefreshInterval: 60000, // Интервал восстановления - 1 минута (60,000 ms)
-    minTime: 760, // Минимальное время между запросами - 760 ms (60000 ms / 79)
+    minTime: 1500, // Минимальное время между запросами - 1500 ms
   });
 
   constructor(
@@ -54,25 +54,23 @@ export class FilesService {
       const axiosInstance = this.transportService.getAxiosInstance('stream');
       const response = await axiosInstance.get(url);
 
-      // Проверка на корректность ответа
       if (!response || !response.data) {
         throw new Error('Некорректный ответ от сервера');
       }
 
       return response;
-
     } catch (error) {
-
-      const elapsedTime = Date.now() - this.startTime;
       this.logger.error(`Ошибка при запросе: ${url} ERROR: ${error.message}`);
       this.logger.error(`Количество успешных запросов до ошибки: ${this.requestCount}`);
-      this.logger.error(`Время выполнения до ошибки: ${elapsedTime} мс`);
-      this.logger.error(`Ошибка при скачивании изображения. Повтор через ${delay} мс. Осталось попыток: ${retries}`);
-      this.startTime = null;
-      this.requestCount = 0;
+
+      if (error.message.includes('ECONNREFUSED')) {
+        this.logger.error('Сервер отказал в соединении. Делаем паузу перед повторной попыткой.');
+      }
 
       if (retries > 0) {
-        await setDelay(delay);
+        const randomDelay = delay + Math.floor(Math.random() * 1000);
+        this.logger.error(`Ошибка при скачивании изображения. Повтор через ${randomDelay} мс. Осталось попыток: ${retries}`);
+        await setDelay(randomDelay);
         return this.fetchWithRetry(url, retries - 1, delay * 2);
       } else {
         throw error;
@@ -82,7 +80,7 @@ export class FilesService {
 
   async downloadImage(url: string, folderPath: string, filename: string): Promise<string> {
     if (!this.startTime) {
-      this.startTime = Date.now(); // Начало отсчета времени
+      this.startTime = Date.now();
     }
     return this.limiter.schedule(() => this._downloadImage(url, folderPath, filename));
   }
@@ -110,7 +108,7 @@ export class FilesService {
 
       return new Promise((resolve, reject) => {
         writer.on('finish', () => {
-          this.requestCount++; // Увеличиваем счетчик при успешной загрузке
+          this.requestCount++;
           resolve(path);
         });
         writer.on('error', (error) => {
@@ -122,8 +120,6 @@ export class FilesService {
       const elapsedTime = Date.now() - this.startTime;
       this.logger.error(`Количество успешных запросов до ошибки : ${this.requestCount} за ${elapsedTime} мс`);
       this.logger.error('Ошибка при скачивании изображения:', { error });
-      this.logger.error(`Количество успешных запросов до ошибки: ${this.requestCount}`);
-      this.logger.error(`Время выполнения до ошибки: ${elapsedTime} мс`);
       this.startTime = null;
       this.requestCount = 0;
 
@@ -293,7 +289,5 @@ export class FilesService {
       this.logger.error(`Ошибка при удалении папки ${folderPath}:`, { error });
     }
   }
-
 }
-
 
