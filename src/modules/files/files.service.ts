@@ -17,7 +17,7 @@ export class FilesService {
   private maxMbps: number = 1.0; // Уменьшите скорость, чтобы протестировать
   private limiter = new Bottleneck({
     maxConcurrent: 1,
-    minTime: 1000, // Увеличьте минимальное время между запросами
+    minTime: 2000, // Увеличьте минимальное время между запросами
   });
 
   constructor(
@@ -57,7 +57,7 @@ export class FilesService {
         });
 
         response.data.on('error', (error) => {
-          this.logger.error('Ошибка при записи файла:', { error });
+          this.logger.error(`Ошибка при записи файла: ${error.message}`);
           observer.error(error);
         });
       }).catch((error) => {
@@ -75,11 +75,11 @@ export class FilesService {
         concatMap(() =>
           this.downloadWithRxJS(url, path).pipe(
             retryWhen(errors => errors.pipe(
-              tap(error => this.logger.error('Ошибка при загрузке, повторная попытка:', { error })),
+              tap(error => this.logger.error(`Ошибка при загрузке, повторная попытка: ${error.message}`)),
               delay(2000) // Увеличьте задержку между повторными попытками
             )),
             catchError(error => {
-              this.logger.error('Ошибка при загрузке файла:', { error });
+              this.logger.error(`Ошибка при загрузке файла: ${error.message}`);
               return throwError(() => error);
             })
           )
@@ -101,7 +101,7 @@ export class FilesService {
       await s3Client.send(new PutObjectCommand(params));
       this.logger.info(`Файл загружен на S3: ${key}`);
     } catch (error) {
-      this.logger.error('Ошибка при загрузке файла на S3:', { error });
+      this.logger.error('Ошибка при загрузке файла на S3: ' + error.message);
     }
   }
 
@@ -120,7 +120,7 @@ export class FilesService {
       await fsPromises.writeFile(filePath, data, 'utf8');
       this.logger.info(`Данные успешно записаны в ${filePath}`);
     } catch (error) {
-      this.logger.error('Ошибка при записи в файл:', { error });
+      this.logger.error('Ошибка при записи в файл: ' +  error.message);
     }
   }
 
@@ -130,7 +130,7 @@ export class FilesService {
     try {
       await fsPromises.mkdir(fullFolderPath, { recursive: true });
     } catch (error) {
-      this.logger.error('Ошибка при создании каталога:', { error });
+      this.logger.error('Ошибка при создании каталога: ' + error.message);
       return { success: false };
     }
 
@@ -141,7 +141,7 @@ export class FilesService {
       this.logger.info(`Данные успешно записаны в ${filePath}`);
       return { success: true };
     } catch (error) {
-      this.logger.error('Ошибка при записи JSON в файл:', { error });
+      this.logger.error('Ошибка при записи JSON в файл: ' + error.message);
       return { success: false };
     }
   }
@@ -164,7 +164,7 @@ export class FilesService {
       const jsonData = await this.readJsonFile(filename, fullFolderPath);
       return jsonData;
     } catch (error) {
-      this.logger.error('Ошибка при чтении данных из JSON-файла:', { error });
+      this.logger.error('Ошибка при чтении данных из JSON-файла: ' + error.message );
       return Promise.resolve('Произошла ошибка при чтении данных из JSON-файла.');
     }
   }
