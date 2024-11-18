@@ -87,7 +87,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.2'
+          cpus: '1.0'
           memory: 2G
     restart: always # эта строка добавляет автоматический перезапуск
 
@@ -137,7 +137,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.2'
+          cpus: '1.0'
           memory: 2G
     restart: always
 
@@ -187,7 +187,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.2'
+          cpus: '1.0'
           memory: 2G
     restart: always
 
@@ -237,7 +237,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.2'
+          cpus: '1.0'
           memory: 2G
     restart: always
 
@@ -287,7 +287,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.2'
+          cpus: '1.0'
           memory: 2G
     restart: always
 
@@ -337,7 +337,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.2'
+          cpus: '1.0'
           memory: 2G
     restart: always
 
@@ -387,7 +387,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.2'
+          cpus: '1.0'
           memory: 2G
     restart: always
 
@@ -437,7 +437,7 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.2'
+          cpus: '1.0'
           memory: 2G
     restart: always
 
