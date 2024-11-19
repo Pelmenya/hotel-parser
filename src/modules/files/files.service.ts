@@ -14,10 +14,10 @@ import { TSuccess } from 'src/types/t-success';
 @Injectable()
 export class FilesService {
   private bucketName: string;
-  private maxMbps: number = 1.0; // Уменьшите скорость, чтобы протестировать
+  private maxMbps: number = 0.9; // Уменьшите скорость, чтобы протестировать
   private limiter = new Bottleneck({
     maxConcurrent: 1,
-    minTime: 2000, // Увеличьте минимальное время между запросами
+ //   minTime: 2000, // Увеличьте минимальное время между запросами
   });
 
   constructor(
@@ -76,7 +76,7 @@ export class FilesService {
           this.downloadWithRxJS(url, path).pipe(
             retryWhen(errors => errors.pipe(
               tap(error => this.logger.error(`Ошибка при загрузке, повторная попытка: ${error.message}`)),
-              delay(2000) // Увеличьте задержку между повторными попытками
+              delay(4000) // Увеличьте задержку между повторными попытками
             )),
             catchError(error => {
               this.logger.error(`Ошибка при загрузке файла: ${error.message}`);
