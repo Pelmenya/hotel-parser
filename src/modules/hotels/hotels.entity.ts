@@ -15,9 +15,6 @@ import { Abouts } from '../abouts/abouts.entity';
 import { Amenities } from '../amenities/amenities.entity';
 import { GeoData } from '../geo/geo-data.entity';
 import { Policies } from '../policies/policies.entity';
-import { TTranslateText } from 'src/types/t-translate-text';
-import { TGeoData } from '../geo/geo-data.types';
-import { TLocationsFrom } from 'src/types/t-locations-from';
 
 @Entity()
 @Index(['hotel_link_ostrovok', 'address'], { unique: true })
@@ -98,4 +95,7 @@ export class Hotels {
 
   @UpdateDateColumn({ type: 'timestamp' })
   updated_at: Date;
+
+  @Column({ default: true })
+  is_visible: boolean;
 }
