@@ -137,6 +137,59 @@ export class TranslationService {
     });
   }
 
+  public async translateFromEnglishToRussian(name: TTranslationName, text: string): Promise<string> {
+    this.resetSymbolsCounter();
+  
+    if (this.symbolsUsed + text.length > 1_000_000) {
+      throw new Error('Exceeded symbol limit per hour');
+    }
+  
+    const targetLang: TLanguage = 'ru'; // Целевой язык - русский
+    const sourceLang: TLanguage = 'en'; // Исходный язык - английский
+  
+    const cachedTranslation = await this.translationRepository.getTranslationFromDictionary(text, targetLang);
+    if (cachedTranslation) {
+      return cachedTranslation;
+    }
+  
+    return this.limiter.schedule(async () => {
+      try {
+        const iamToken = await this.getIamToken();
+        const folderId = this.configService.get<string>('YA_FOLDER_ID');
+  
+        const response = await this.axiosInstance.post(
+          this.configService.get<string>('TRANSLATE_API_URL'),
+          {
+            folderId,
+            texts: [text],
+            targetLanguageCode: targetLang,
+            sourceLanguageCode: sourceLang, // Указание исходного языка
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${iamToken}`,
+            },
+          },
+        );
+  
+        const translatedText = response.data.translations[0].text;
+        await this.translationRepository.saveTranslationToDictionary(name, text, translatedText, targetLang);
+  
+        this.symbolsUsed += text.length;
+  
+        return translatedText;
+      } catch (error) {
+        this.logger.error('Failed to translate text from English to Russian', error.stack);
+        if (error.response && error.response.status === 429) {
+          await setDelay(1000);
+          return this.translateFromEnglishToRussian(name, text);
+        }
+        throw new Error('Failed to translate text from English to Russian');
+      }
+    });
+  }
+
   async saveTranslationToDictionary (name: TTranslationName, originalText: string, translatedText: string, targetLang: TLanguage) {
     
     const cachedTranslation = await this.translationRepository.getTranslationFromDictionary(originalText, targetLang);

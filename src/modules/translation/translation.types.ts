@@ -9,5 +9,6 @@ export type TTranslationName =
     | 'policy'
     | 'description'
     | 'hotel from location'
-    | 'hotel name';
+    | 'hotel name'
+    | 'address';
 

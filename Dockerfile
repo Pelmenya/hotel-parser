@@ -1,5 +1,5 @@
 # Используем базовый образ Node.js
-FROM node:18.20.4
+FROM node:20
 
 # Install necessary libraries for Puppeteer
 RUN apt-get update && apt-get install -y \
