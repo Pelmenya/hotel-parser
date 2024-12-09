@@ -53,4 +53,9 @@ export class HotelsController {
         return await this.hotelsService.patchInvalidHotelsAddresses();
     }
     
+    @Get('locations')
+    async createHotelsLocations(@Query() params: { batch: number }): Promise<any> {
+        return await this.hotelsService.processHotelsLocations(params.batch);
+    }
+
 }

@@ -13,7 +13,10 @@ import { TLanguage } from 'src/types/t-language';
   export class Locations {
       @PrimaryGeneratedColumn('uuid')
       id: string;
-  
+
+      @Column()
+      address: string;
+
       @Index()
       @ManyToOne(() => Hotels, (hotel) => hotel.locations, { nullable: true })
       @JoinColumn({ name: 'hotel_id' }) // Явное имя столбца

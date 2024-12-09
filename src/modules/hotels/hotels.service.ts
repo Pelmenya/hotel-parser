@@ -604,6 +604,10 @@ export class HotelsService {
         }
     }
     
+    async processHotelsLocations(batch: number) {
+        return this.hotelsRepository.findHotelsIsVisibleAndNotProcessedAddress(batch);
+    }
+
 }
 
 

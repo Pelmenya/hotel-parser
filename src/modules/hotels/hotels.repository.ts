@@ -103,4 +103,11 @@ export class HotelsRepository {
             .limit(20000).getMany();
     }
 
+    async findHotelsIsVisibleAndNotProcessedAddress(batch: number): Promise<Hotels[]> {
+        return this.hotelsRepository.createQueryBuilder("hotel")
+        .where("hotel.address_processed = false")
+        .andWhere("hotel.is_visible = true")
+        .limit(batch)
+        .getMany();
+    }
 }

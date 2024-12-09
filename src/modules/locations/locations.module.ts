@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { LocationsRepository } from './locations.service';
+import { LocationsRepository } from './locations.repository';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Locations } from './locations.entity';
 
