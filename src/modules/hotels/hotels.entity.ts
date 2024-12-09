@@ -15,6 +15,7 @@ import { Abouts } from '../abouts/abouts.entity';
 import { Amenities } from '../amenities/amenities.entity';
 import { GeoData } from '../geo/geo-data.entity';
 import { Policies } from '../policies/policies.entity';
+import { Locations } from '../locations/locations.entity';
 
 @Entity()
 @Index(['hotel_link_ostrovok', 'address'], { unique: true })
@@ -50,6 +51,9 @@ export class Hotels {
   @ManyToOne(() => Districts, district => district.hotels, { nullable: true })
   @JoinColumn({ name: 'district_id' })
   district?: Districts;
+
+  @OneToMany(() => Locations, location => location.hotel, { nullable: true })
+  locations?: Locations;
 
   @OneToMany(() => Abouts, about => about.hotel, { nullable: true })
   abouts?: Abouts;

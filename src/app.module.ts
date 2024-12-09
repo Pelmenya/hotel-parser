@@ -18,6 +18,7 @@ import { TranslationModule } from './modules/translation/translation.module';
 import { PoliciesModule } from './modules/policies/policies.module';
 import { LoggerModule } from './modules/logger/logger.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { LocationsModule } from './modules/locations/locations.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { SettingsModule } from './modules/settings/settings.module';
     PoliciesModule,
     LoggerModule,
     SettingsModule,
+    LocationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
