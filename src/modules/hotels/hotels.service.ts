@@ -569,6 +569,41 @@ export class HotelsService {
 
         return { success: true }; // Возвращаем true, если данных нет, чтобы отметить как обработанное
     }
+
+    async patchInvalidHotelsAddresses() {
+        try {
+            // Шаг 1: Получаем отели с некорректными адресами
+            const hotels = await this.hotelsRepository.findHotelsWithInvalidAddresses();
+    
+            if (hotels.length === 0) {
+                this.logger.info('No hotels with invalid addresses found.');
+                return;
+            }
+    
+            // Шаг 2: Проходим по каждому отелю и переводим адрес
+            for (const hotel of hotels) {
+                try {
+                    if (hotel.address_page) {
+                        // Шаг 3: Переводим адрес с английского на русский
+                        const translatedAddress = await this.translationService.translateFromEnglishToRussian('address', hotel.address_page);
+    
+                        // Шаг 4: Обновляем поле address
+                        hotel.address = translatedAddress;
+    
+                        // Шаг 5: Сохраняем изменения
+                        await this.hotelsRepository.save(hotel);
+    
+                        this.logger.info(`Address updated for hotel ${hotel.name} to: ${translatedAddress}`);
+                    }
+                } catch (error) {
+                    this.logger.error(`Failed to translate address for hotel ${hotel.name}:`, error.stack);
+                }
+            }
+        } catch (error) {
+            this.logger.error('Error occurred while patching invalid hotel addresses:', error.stack);
+        }
+    }
+    
 }
 
 

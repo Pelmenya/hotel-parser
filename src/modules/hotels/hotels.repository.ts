@@ -95,4 +95,12 @@ export class HotelsRepository {
     async findLockedByInstance(instanceId: string) {
         return this.hotelsRepository.find({ where: { locked_by: instanceId } });
     }
+
+    async findHotelsWithInvalidAddresses(): Promise<Hotels[]> {
+        return this.hotelsRepository.createQueryBuilder("hotel")
+            .where("hotel.address_page IS NOT NULL")
+            .andWhere("hotel.address ~ '[A-Za-z]'")
+            .limit(20000).getMany();
+    }
+
 }

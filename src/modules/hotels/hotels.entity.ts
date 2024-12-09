@@ -35,7 +35,7 @@ export class Hotels {
   address_page: string;
 
   @Column({ nullable: true })
-  address_full?: string;
+  address_data?: string;
 
   @Column({type: 'float', nullable: true })
   rating?: number;
@@ -86,6 +86,9 @@ export class Hotels {
 
   @Column({ default: false })
   policies_processed: boolean;
+
+  @Column({ default: false })
+  address_processed: boolean;
 
   @Column({ nullable: true })
   locked_by?: string;

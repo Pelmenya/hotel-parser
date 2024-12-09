@@ -1,4 +1,4 @@
-import { Controller, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
+import { Controller, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
 import { HotelsService } from './hotels.service';
 import { TSuccess } from 'src/types/t-success';
 
@@ -46,4 +46,11 @@ export class HotelsController {
     async createHotelFromPageById(@Param('id') id: string,): Promise<any> {
         return await this.hotelsService.extractAndStoreHotelFromPage(id);
     }
+
+    @Patch('address')
+    @HttpCode(200)
+    async patchInvalidHotelsAddresses(): Promise<any> {
+        return await this.hotelsService.patchInvalidHotelsAddresses();
+    }
+    
 }
