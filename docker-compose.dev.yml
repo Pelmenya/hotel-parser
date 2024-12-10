@@ -35,11 +35,12 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
-      - ./logs:/app/logs  # Монтируем директорию logs на хосте в /app/logs в контейнере
+      - ./logs:/app/logs
     ports:
       - ${DEV_PORT_1}:3000
     depends_on:
       - postgres_postgis_parser
+      - redis_parser
     environment:
       PORT: ${DEV_PORT_1}
       SECRET: ${SECRET}
@@ -67,14 +68,30 @@ services:
       IAM_TOKEN_URL: ${IAM_TOKEN_URL}
       TRANSLATE_API_URL: ${TRANSLATE_API_URL}
       KEY_FILE_PATH: ${KEY_FILE_PATH}
+      HTTP_GEOCODER_API_KEY_1: ${HTTP_GEOCODER_API_KEY_1}
+      HTTP_GEOCODER_API_KEY_2: ${HTTP_GEOCODER_API_KEY_2}
+      REDIS_HOST: redis_parser
+      REDIS_PORT: 6379
     working_dir: /app
     command: sh -c "cd /app; rm -rf dist; npm install; npm run start:dev"
+    networks:
+      - custom_network
+
+  redis_parser:
+    image: redis:latest
+    container_name: redis_parser
+    restart: always
+    ports:
+      - 6379:6379
+    volumes:
+      - redis_data:/data
     networks:
       - custom_network
 
 volumes:
   postgres_data_parser:
   pgadmin_data_parser:
+  redis_data:
 
 networks:
   custom_network:

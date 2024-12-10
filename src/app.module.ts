@@ -19,6 +19,7 @@ import { PoliciesModule } from './modules/policies/policies.module';
 import { LoggerModule } from './modules/logger/logger.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { LocationsModule } from './modules/locations/locations.module';
+import { RedisModule } from './modules/redis/redis.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { LocationsModule } from './modules/locations/locations.module';
     LoggerModule,
     SettingsModule,
     LocationsModule,
+    RedisModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -15,6 +15,9 @@ import { TranslationModule } from '../translation/translation.module';
 import { GeoModule } from '../geo/geo.module';
 import { PoliciesModule } from '../policies/policies.module';
 import { SettingsModule } from '../settings/settings.module';
+import { LocationsModule } from '../locations/locations.module';
+import { TransportModule } from '../transport/transport.module';
+import { RedisModule } from '../redis/redis.module';
 
 @Module({
   imports: [
@@ -29,7 +32,10 @@ import { SettingsModule } from '../settings/settings.module';
     TranslationModule,
     GeoModule,  
     PoliciesModule,
-    SettingsModule
+    SettingsModule,
+    LocationsModule,
+    TransportModule,
+    RedisModule,
   ],
   providers: [
     HotelsRepository, 

@@ -28,13 +28,18 @@ import { TDistanceMeasurement } from 'src/types/t-distance-measurement';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { Logger } from 'winston';
 import { SettingsService } from '../settings/settings.service';
+import { LocationsRepository } from '../locations/locations.repository';
+import { Locations } from '../locations/locations.entity';
+import { TransportService } from '../transport/transport.service';
+import { RedisService } from '../redis/redis.service';
 
 
 @Injectable()
 export class HotelsService {
     private readonly instanceId: number;
     private readonly totalInstances: number;
-
+    private readonly HTTP_GEOCODER_API_KEY_1: string;
+    private readonly HTTP_GEOCODER_API_KEY_2: string;
     constructor(
         private readonly configService: ConfigService,
         private readonly hotelsRepository: HotelsRepository,
@@ -49,10 +54,16 @@ export class HotelsService {
         private readonly geoService: GeoService,
         private readonly policiesService: PoliciesService,
         private readonly settingsService: SettingsService,
+        private readonly locatoinsRepository : LocationsRepository,
+        private readonly transportService: TransportService,
+        private readonly redisService: RedisService, // Внедряем RedisService
+
         @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
     ) {
         this.instanceId = this.configService.get<number>('INSTANCE_ID');
         this.totalInstances = this.configService.get<number>('TOTAL_INSTANCES');
+        this.HTTP_GEOCODER_API_KEY_1 = this.configService.get<string>('HTTP_GEOCODER_API_KEY_1');
+        this.HTTP_GEOCODER_API_KEY_2 = this.configService.get<string>('HTTP_GEOCODER_API_KEY_2');
         this.processLockedHotels();
     }
 
@@ -605,9 +616,94 @@ export class HotelsService {
     }
     
     async processHotelsLocations(batch: number) {
-        return this.hotelsRepository.findHotelsIsVisibleAndNotProcessedAddress(batch);
-    }
-
+        const hotels = await this.hotelsRepository.findHotelsIsVisibleAndNotProcessedAddress(batch);
+    
+        for (const hotel of hotels) {
+          try {
+            // Проверка кеша Redis
+            const cachedData = await this.redisService.get(hotel.address_page);
+            if (cachedData) {
+              const cachedLocations = JSON.parse(cachedData) as Locations[];
+              for (const location of cachedLocations) {
+                location.hotel = hotel;
+                await this.locatoinsRepository.save(location);
+              }
+              hotel.address_processed = true;
+              await this.hotelsRepository.save(hotel);
+              this.logger.info(`Used cached geocode data for hotel: ${hotel.name}`);
+              continue;
+            }
+    
+            // Получение геоданных на русском языке
+            const responseRu = await this.transportService.getAxiosInstance().get('https://geocode-maps.yandex.ru/1.x/', {
+              params: {
+                apikey: 'YOUR_API_KEY',
+                geocode: hotel.address_page,
+                format: 'json'
+              }
+            });
+    
+            const geoObjectsRu = responseRu.data.response.GeoObjectCollection.featureMember;
+            const exactMatchRu = geoObjectsRu.find((geoObject: any) => {
+              const metaData = geoObject.GeoObject.metaDataProperty.GeocoderMetaData;
+              return metaData.precision === 'exact' && metaData.Address.country_code === 'RU';
+            });
+    
+            const locations: Locations[] = [];
+            if (exactMatchRu) {
+              const addressFullRu = exactMatchRu.GeoObject.metaDataProperty.GeocoderMetaData.Address.formatted;
+              const locationRu = new Locations();
+              locationRu.address = addressFullRu;
+              locationRu.hotel = hotel;
+              locationRu.language = 'ru';
+              locationRu.geocode_data = exactMatchRu.GeoObject;
+    
+              await this.locatoinsRepository.save(locationRu);
+              locations.push(locationRu);
+    
+              // Получение геоданных на английском языке
+              const responseEn = await this.transportService.getAxiosInstance().get('https://geocode-maps.yandex.ru/1.x/', {
+                params: {
+                  apikey: 'YOUR_API_KEY',
+                  geocode: hotel.address_page,
+                  format: 'json',
+                  lang: 'en_RU'
+                }
+              });
+    
+              const geoObjectsEn = responseEn.data.response.GeoObjectCollection.featureMember;
+              const exactMatchEn = geoObjectsEn.find((geoObject: any) => {
+                const metaData = geoObject.GeoObject.metaDataProperty.GeocoderMetaData;
+                return metaData.precision === 'exact' && metaData.Address.country_code === 'RU';
+              });
+    
+              if (exactMatchEn) {
+                const addressFullEn = exactMatchEn.GeoObject.metaDataProperty.GeocoderMetaData.Address.formatted;
+                const locationEn = new Locations();
+                locationEn.address = addressFullEn;
+                locationEn.hotel = hotel;
+                locationEn.language = 'en';
+                locationEn.geocode_data = exactMatchEn.GeoObject;
+    
+                await this.locatoinsRepository.save(locationEn);
+                locations.push(locationEn);
+              }
+            }
+    
+            // Сохранение результатов в кеш Redis
+            await this.redisService.set(hotel.address_page, JSON.stringify(locations), 3600000); // 1 час кеширования
+    
+            hotel.address_processed = true;
+            await this.hotelsRepository.save(hotel);
+    
+            this.logger.info(`Processed geocode response for hotel: ${hotel.name}`);
+          } catch (error) {
+            this.logger.error(`Error processing hotel ${hotel.id}: ${error.message}`);
+          }
+        }
+    
+        return hotels;
+      }
 }
 
 
