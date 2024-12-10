@@ -13,7 +13,7 @@ services:
     ports:
       - ${POSTGRES_PORT}:5432
     networks:
-      - custom_network
+      - my_unique_network
 
   adminer_pgadmin4_parser:
     image: dpage/pgadmin4
@@ -27,7 +27,7 @@ services:
     volumes:
       - pgadmin_data_parser:/var/lib/pgadmin
     networks:
-      - custom_network 
+      - my_unique_network 
 
   hotel-parser-1:
     build: ./ 
@@ -72,12 +72,15 @@ services:
       HTTP_GEOCODER_API_KEY_2: ${HTTP_GEOCODER_API_KEY_2}
       HTTP_GEOCODER_API_KEY_3: ${HTTP_GEOCODER_API_KEY_3}
       HTTP_GEOCODER_API_KEY_4: ${HTTP_GEOCODER_API_KEY_4}
+      HTTP_GEOCODER_API_KEY_5: ${HTTP_GEOCODER_API_KEY_5}
+      HTTP_GEOCODER_API_KEY_6: ${HTTP_GEOCODER_API_KEY_6}
+      HTTP_GEOCODER_API_KEY_7: ${HTTP_GEOCODER_API_KEY_7}
       REDIS_HOST: redis_parser
       REDIS_PORT: 6379
     working_dir: /app
     command: sh -c "cd /app; rm -rf dist; npm install; npm run start:dev"
     networks:
-      - custom_network
+      - my_unique_network
 
   redis_parser:
     image: redis:latest
@@ -88,7 +91,7 @@ services:
     volumes:
       - redis_data:/data
     networks:
-      - custom_network
+      - my_unique_network
 
 volumes:
   postgres_data_parser:
@@ -96,5 +99,5 @@ volumes:
   redis_data:
 
 networks:
-  custom_network:
+  my_unique_network:
     driver: bridge

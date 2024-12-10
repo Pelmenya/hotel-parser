@@ -42,6 +42,10 @@ export class HotelsService {
     private readonly HTTP_GEOCODER_API_KEY_2: string;
     private readonly HTTP_GEOCODER_API_KEY_3: string;
     private readonly HTTP_GEOCODER_API_KEY_4: string;
+    private readonly HTTP_GEOCODER_API_KEY_5: string;
+    private readonly HTTP_GEOCODER_API_KEY_6: string;
+    private readonly HTTP_GEOCODER_API_KEY_7: string;
+
     constructor(
         private readonly configService: ConfigService,
         private readonly hotelsRepository: HotelsRepository,
@@ -68,7 +72,9 @@ export class HotelsService {
         this.HTTP_GEOCODER_API_KEY_2 = this.configService.get<string>('HTTP_GEOCODER_API_KEY_2');
         this.HTTP_GEOCODER_API_KEY_3 = this.configService.get<string>('HTTP_GEOCODER_API_KEY_3');
         this.HTTP_GEOCODER_API_KEY_4 = this.configService.get<string>('HTTP_GEOCODER_API_KEY_4');
-
+        this.HTTP_GEOCODER_API_KEY_5 = this.configService.get<string>('HTTP_GEOCODER_API_KEY_5');
+        this.HTTP_GEOCODER_API_KEY_6 = this.configService.get<string>('HTTP_GEOCODER_API_KEY_6');
+        this.HTTP_GEOCODER_API_KEY_7 = this.configService.get<string>('HTTP_GEOCODER_API_KEY_7');
     }
 
     async checkRunFlag(): Promise<boolean> {
@@ -641,7 +647,7 @@ export class HotelsService {
             // Получение геоданных на русском языке
             const responseRu = await this.transportService.getAxiosInstance().get('https://geocode-maps.yandex.ru/1.x/', {
               params: {
-                apikey: this.HTTP_GEOCODER_API_KEY_4,
+                apikey: this.HTTP_GEOCODER_API_KEY_7,
                 geocode: hotel.address_page,
                 format: 'json'
               }
@@ -673,7 +679,7 @@ export class HotelsService {
               // Получение геоданных на английском языке
               const responseEn = await this.transportService.getAxiosInstance().get('https://geocode-maps.yandex.ru/1.x/', {
                 params: {
-                  apikey: this.HTTP_GEOCODER_API_KEY_3,
+                  apikey: this.HTTP_GEOCODER_API_KEY_7,
                   geocode: hotel.address_page,
                   format: 'json',
                   lang: 'en_RU'
