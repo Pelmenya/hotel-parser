@@ -16,7 +16,6 @@ export class RedisService {
             host: this.configService.get<string>('REDIS_HOST'),
             port: this.configService.get<number>('REDIS_PORT'),
         });
-        this.checkRedisConnection();
     }
 
     async get(key: string): Promise<string | null> {
