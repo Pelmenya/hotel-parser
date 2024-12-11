@@ -38,13 +38,8 @@ import { RedisService } from '../redis/redis.service';
 export class HotelsService {
     private readonly instanceId: number;
     private readonly totalInstances: number;
-    private readonly HTTP_GEOCODER_API_KEY_1: string;
-    private readonly HTTP_GEOCODER_API_KEY_2: string;
-    private readonly HTTP_GEOCODER_API_KEY_3: string;
-    private readonly HTTP_GEOCODER_API_KEY_4: string;
-    private readonly HTTP_GEOCODER_API_KEY_5: string;
-    private readonly HTTP_GEOCODER_API_KEY_6: string;
-    private readonly HTTP_GEOCODER_API_KEY_7: string;
+    private readonly YA_HTTP_GEOCODER_API_KEY: string;
+    private readonly AHUNTER_API_KEY: string;
 
     constructor(
         private readonly configService: ConfigService,
@@ -68,13 +63,8 @@ export class HotelsService {
     ) {
         this.instanceId = this.configService.get<number>('INSTANCE_ID');
         this.totalInstances = this.configService.get<number>('TOTAL_INSTANCES');
-        this.HTTP_GEOCODER_API_KEY_1 = this.configService.get<string>('HTTP_GEOCODER_API_KEY_1');
-        this.HTTP_GEOCODER_API_KEY_2 = this.configService.get<string>('HTTP_GEOCODER_API_KEY_2');
-        this.HTTP_GEOCODER_API_KEY_3 = this.configService.get<string>('HTTP_GEOCODER_API_KEY_3');
-        this.HTTP_GEOCODER_API_KEY_4 = this.configService.get<string>('HTTP_GEOCODER_API_KEY_4');
-        this.HTTP_GEOCODER_API_KEY_5 = this.configService.get<string>('HTTP_GEOCODER_API_KEY_5');
-        this.HTTP_GEOCODER_API_KEY_6 = this.configService.get<string>('HTTP_GEOCODER_API_KEY_6');
-        this.HTTP_GEOCODER_API_KEY_7 = this.configService.get<string>('HTTP_GEOCODER_API_KEY_7');
+        this.YA_HTTP_GEOCODER_API_KEY = this.configService.get<string>('YA_HTTP_GEOCODER_API_KEY');
+        this.AHUNTER_API_KEY = this.configService.get<string>('AHUNTER_API_KEY');
     }
 
     async checkRunFlag(): Promise<boolean> {
@@ -627,100 +617,73 @@ export class HotelsService {
     
     async processHotelsLocations(batch: number) {
         const hotels = await this.hotelsRepository.findHotelsIsVisibleAndNotProcessedAddress(batch);
-      
+    
         for (const hotel of hotels) {
-          try {
-            // Проверка кеша Redis
-            const cachedData = await this.redisService.get(hotel.address_page);
-            if (cachedData) {
-              const cachedLocations = JSON.parse(cachedData) as Locations[];
-              for (const location of cachedLocations) {
-                location.hotel = hotel;
-                await this.locatoinsRepository.save(location);
-              }
-              hotel.address_processed = true;
-              await this.hotelsRepository.save(hotel);
-              this.logger.info(`Used cached geocode data for hotel: ${hotel.name}`);
-              continue;
-            }
-      
-            // Получение геоданных на русском языке
-            const responseRu = await this.transportService.getAxiosInstance().get('https://geocode-maps.yandex.ru/1.x/', {
-              params: {
-                apikey: this.HTTP_GEOCODER_API_KEY_7,
-                geocode: hotel.address_page,
-                format: 'json'
-              }
-            });
-      
-            const geoObjectsRu = responseRu.data.response.GeoObjectCollection?.featureMember;
-            if (!geoObjectsRu || geoObjectsRu.length === 0) {
-              this.logger.warn(`No geocode data found for hotel: ${hotel.name}`);
-              continue; // Пропускаем отель, если данные отсутствуют
-            }
-      
-            const exactMatchRu = geoObjectsRu.find((geoObject: any) => {
-              const metaData = geoObject.GeoObject.metaDataProperty.GeocoderMetaData;
-              return metaData.precision === 'exact' && metaData.Address.country_code === 'RU';
-            });
-      
-            const locations: Locations[] = [];
-            if (exactMatchRu) {
-              const addressFullRu = exactMatchRu.GeoObject.metaDataProperty.GeocoderMetaData.Address.formatted;
-              const locationRu = new Locations();
-              locationRu.address = addressFullRu;
-              locationRu.hotel = hotel;
-              locationRu.language = 'ru';
-              locationRu.geocode_data = exactMatchRu.GeoObject;
-      
-              await this.locatoinsRepository.save(locationRu);
-              locations.push(locationRu);
-      
-              // Получение геоданных на английском языке
-              const responseEn = await this.transportService.getAxiosInstance().get('https://geocode-maps.yandex.ru/1.x/', {
-                params: {
-                  apikey: this.HTTP_GEOCODER_API_KEY_7,
-                  geocode: hotel.address_page,
-                  format: 'json',
-                  lang: 'en_RU'
+            try {
+                // Проверка кеша Redis
+                const cachedData = await this.redisService.get(hotel.address_page);
+                if (cachedData) {
+                    const cachedLocations = JSON.parse(cachedData) as Locations[];
+                    for (const location of cachedLocations) {
+                        location.hotel = hotel;
+                        await this.locatoinsRepository.save(location);
+                    }
+                    hotel.address_processed = true;
+                    await this.hotelsRepository.save(hotel);
+                    this.logger.info(`Used cached geocode data for hotel: ${hotel.name}`);
+                    continue;
                 }
-              });
-      
-              const geoObjectsEn = responseEn.data.response.GeoObjectCollection?.featureMember;
-              if (geoObjectsEn) {
-                const exactMatchEn = geoObjectsEn.find((geoObject: any) => {
-                  const metaData = geoObject.GeoObject.metaDataProperty.GeocoderMetaData;
-                  return metaData.precision === 'exact' && metaData.Address.country_code === 'RU';
+    
+                // Получение геоданных на русском языке через API ahunter
+                const encodedQuery = encodeURIComponent(hotel.address_page);
+                const response = await this.transportService.getAxiosInstance().get('https://ahunter.ru/site/cleanse/address', {
+                    params: {
+                        user: this.AHUNTER_API_KEY,
+                        output: 'json',
+                        query: encodedQuery
+                    }
                 });
-      
-                if (exactMatchEn) {
-                  const addressFullEn = exactMatchEn.GeoObject.metaDataProperty.GeocoderMetaData.Address.formatted;
-                  const locationEn = new Locations();
-                  locationEn.address = addressFullEn;
-                  locationEn.hotel = hotel;
-                  locationEn.language = 'en';
-                  locationEn.geocode_data = exactMatchEn.GeoObject;
-      
-                  await this.locatoinsRepository.save(locationEn);
-                  locations.push(locationEn);
+    
+                const geoData: TAddressResponse = response.data;
+                if (!geoData || !geoData.addresses || geoData.addresses.length === 0) {
+                    this.logger.warn(`No geocode data found for hotel: ${hotel.name}`);
+                    continue; // Пропускаем отель, если данные отсутствуют
                 }
-              }
+    
+                // Выбираем адрес с наилучшим качеством
+                const bestAddress = geoData.addresses.reduce((best, current) => {
+                    if (current.quality.precision > best.quality.precision) {
+                        return current;
+                    } else if (current.quality.precision === best.quality.precision) {
+                        return current.quality.recall > best.quality.recall ? current : best;
+                    }
+                    return best;
+                }, geoData.addresses[0]);
+    
+                // Создаем и сохраняем объект Locations
+                const location = new Locations();
+                location.address = bestAddress.pretty;
+                location.hotel = hotel;
+                location.language = 'ru';
+                location.geocode_data = bestAddress;
+    
+                await this.locatoinsRepository.save(location);
+    
+                // Сохранение результатов в кеш Redis
+                // Сохранение результатов в кеш Redis навсегда
+                await this.redisService.set(hotel.address_page, JSON.stringify([location]));
+
+                hotel.address_processed = true;
+                await this.hotelsRepository.save(hotel);
+    
+                this.logger.info(`Processed best geocode response for hotel: ${hotel.name}`);
+            } catch (error) {
+                this.logger.error(`Error processing hotel ${hotel.id}: ${error.message}`);
             }
-      
-            // Сохранение результатов в кеш Redis
-            await this.redisService.set(hotel.address_page, JSON.stringify(locations), 3600000); // 1 час кеширования
-      
-            hotel.address_processed = true;
-            await this.hotelsRepository.save(hotel);
-      
-            this.logger.info(`Processed geocode response for hotel: ${hotel.name}`);
-          } catch (error) {
-            this.logger.error(`Error processing hotel ${hotel.id}: ${error.message}`);
-          }
         }
-      
+    
         return hotels;
-      }
+    }
 }
 
 
