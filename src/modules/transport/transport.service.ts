@@ -59,12 +59,13 @@ export class TransportService {
     // this.checkPuppeteerIP();
   }
 
-  getAxiosInstance(responseType: 'json' | 'stream' = 'json'): AxiosInstance {
-    return axios.create({
-      httpAgent: this.axiosInstance.defaults.httpAgent,
-      httpsAgent: this.axiosInstance.defaults.httpsAgent,
-      responseType: responseType,
-    });
+  getAxiosInstance(responseType: 'json' | 'stream' = 'json', proxy = true): AxiosInstance {
+    return proxy ?
+      axios.create({
+        httpAgent: this.axiosInstance.defaults.httpAgent,
+        httpsAgent: this.axiosInstance.defaults.httpsAgent,
+        responseType: responseType,
+      }) : axios.create();
   }
 
   getS3Client(): S3Client {
@@ -119,7 +120,7 @@ export class TransportService {
       });
       await page.goto('https://api.ipify.org', { waitUntil: 'networkidle2' });
       const content = await page.evaluate(() => document.body.textContent);
-      this.logger.info(`Your IP through Puppeteer proxy is: ${content}` );
+      this.logger.info(`Your IP through Puppeteer proxy is: ${content}`);
       await browser.close();
     } catch (error) {
       this.logger.error(`Puppeteer error: ${error}`);
