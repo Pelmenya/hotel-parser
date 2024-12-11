@@ -34,13 +34,22 @@ export class RedisService {
         await this.client.del(key);
     }
 
+    async flushAll(): Promise<void> {
+        try {
+            await this.client.flushall();
+            this.logger.info('Successfully flushed all Redis keys.');
+        } catch (error) {
+            this.logger.error('Error flushing Redis keys:', error);
+        }
+    }
+
     async checkRedisConnection() {
         try {
             const result = await this.client.get('test_key');
             if (!result) {
                 await this.client.set('test_key', 'test_value');
             }
-            this.client.info('Redis is working correctly.');
+            this.logger.info('Redis is working correctly.');
         } catch (error) {
             this.logger.error('Redis is not working:', error);
         }
