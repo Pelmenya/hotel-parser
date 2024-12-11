@@ -636,14 +636,13 @@ export class HotelsService {
     
                 // Получение геоданных на русском языке через API ahunter
                 const encodedQuery = encodeURIComponent(hotel.address_page);
-                const response = await this.transportService.getAxiosInstance().get('https://ahunter.ru/site/cleanse/address', {
-                    params: {
-                        user: this.AHUNTER_API_KEY,
-                        output: 'json',
-                        query: encodedQuery
-                    }
-                });
-    
+                const response = 
+                    await this.transportService.
+                    getAxiosInstance().get(`https://ahunter.ru/site/cleanse/address?user=${this.AHUNTER_API_KEY};output=json;query=${encodedQuery}`);
+                
+                console.log(response.data)
+                console.log(hotel.address_page)
+
                 const geoData: TAddressResponse = response.data;
                 if (!geoData || !geoData.addresses || geoData.addresses.length === 0) {
                     this.logger.warn(`No geocode data found for hotel: ${hotel.name}`);
