@@ -621,7 +621,7 @@ export class HotelsService {
         for (const hotel of hotels) {
             try {
                 // Проверка кеша Redis
-                const cachedData = await this.redisService.get(hotel.address_page);
+                const cachedData = await this.redisService.get(hotel.address);
                 if (cachedData) {
                     const cachedLocations = JSON.parse(cachedData) as Locations[];
                     for (const location of cachedLocations) {
@@ -635,7 +635,7 @@ export class HotelsService {
                 }
 
                 // Получение геоданных на русском языке через API ahunter
-                const encodedQuery = encodeURIComponent(hotel.address_page);
+                const encodedQuery = encodeURIComponent(hotel.address);
                 const response =
                     await this.transportService
                         .getAxiosInstance('json', false)
@@ -643,6 +643,8 @@ export class HotelsService {
 
                 const geoData: TAddressResponse = response.data;
                 if (!geoData || !geoData.addresses || geoData.addresses.length === 0) {
+                    hotel.address_processed = true;
+                    await this.hotelsRepository.save(hotel);
                     this.logger.warn(`No geocode data found for hotel: ${hotel.name}`);
                     continue; // Пропускаем отель, если данные отсутствуют
                 }
