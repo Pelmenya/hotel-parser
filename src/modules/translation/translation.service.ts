@@ -105,7 +105,7 @@ export class TranslationService {
         const iamToken = await this.getIamToken();
         const folderId = this.configService.get<string>('YA_FOLDER_ID');
 
-        const response = await this.axiosInstance.post(
+        const response = await this.transportService.getAxiosInstance('json', false).post(
           this.configService.get<string>('TRANSLATE_API_URL'),
           {
             folderId,
