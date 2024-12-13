@@ -103,6 +103,41 @@ export class LocationsService {
         }
     }
 
+    private async translateLocation(location: Locations): Promise<Locations> {
+        for (let attempt = 1; attempt <= this.MAX_ATTEMPTS; attempt++) {
+            try {
+                const translatedGeocodeData = await this.translateGeocodeData(location.geocode_data);
+
+                const hotelId = await this.locationsRepository.findHotelId(location.id);
+                if (!hotelId) {
+                    throw new Error(`Hotel not found for location with ID: ${location.id}`);
+                }
+
+                const newLocation = new Locations();
+                newLocation.hotel = { id: hotelId } as Hotels;
+                newLocation.language = 'en';
+                newLocation.address = translatedGeocodeData.pretty;
+                newLocation.geocode_data = translatedGeocodeData;
+
+                await this.locationsRepository.save(newLocation);
+                location.is_translated_to_en = true;
+                await this.locationsRepository.save(location);
+
+                this.logger.info(`Successfully translated location with ID: ${location.id}`);
+
+                return newLocation;
+            } catch (error) {
+                this.logger.error(`Error translating location with ID: ${location.id} on attempt ${attempt}: ${error.stack}`);
+                if (attempt < this.MAX_ATTEMPTS) {
+                    this.logger.warn(`Retrying translation for location with ID: ${location.id} after ${this.RETRY_DELAY_MS}ms`);
+                    await new Promise(resolve => setTimeout(resolve, this.RETRY_DELAY_MS));
+                } else {
+                    throw error;
+                }
+            }
+        }
+    }
+
     // Перевод данных geocode_data
     private async translateGeocodeData(geocodeData: TAddress): Promise<TAddress> {
         const translatedGeocodeData = { ...geocodeData };
