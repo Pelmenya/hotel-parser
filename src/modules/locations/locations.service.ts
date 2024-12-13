@@ -8,10 +8,18 @@ import { Hotels } from '../hotels/hotels.entity';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { Logger } from 'winston';
 import { SettingsService } from '../settings/settings.service';
+import Bottleneck from 'bottleneck';
 
 @Injectable()
 export class LocationsService {
     private readonly BATCH_SIZE = 5;
+    private readonly MAX_ATTEMPTS = 3;
+    private readonly RETRY_DELAY_MS = 1000; // 1 second
+
+    private readonly limiter = new Bottleneck({
+        maxConcurrent: 2, // Limit the number of concurrent executions
+        minTime: 200 // Minimum time between requests (in milliseconds)
+    });
 
     constructor(
         private readonly locationsRepository: LocationsRepository,
@@ -19,8 +27,9 @@ export class LocationsService {
         private readonly settingsService: SettingsService,
         @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
     ) {
-//        this.init();
+        this.init();
     }
+
     private async init() {
         try {
             const shouldRun = await this.settingsService.getRunFlag();
@@ -58,38 +67,49 @@ export class LocationsService {
         try {
             const locations = await this.locationsRepository.findRussianLocationsWithoutEnglishTranslation(batch);
 
-            const translationPromises = locations.map(async (location) => {
-                try {
-                    const translatedGeocodeData = await this.translateGeocodeData(location.geocode_data);
-
-                    const hotelId = await this.locationsRepository.findHotelId(location.id);
-                    if (!hotelId) {
-                        throw new Error(`Hotel not found for location with ID: ${location.id}`);
-                    }
-
-                    const newLocation = new Locations();
-                    newLocation.hotel = { id: hotelId } as Hotels;
-                    newLocation.language = 'en';
-                    newLocation.address = translatedGeocodeData.pretty;
-                    newLocation.geocode_data = translatedGeocodeData;
-
-                    await this.locationsRepository.save(newLocation);
-                    location.is_translated_to_en = true;
-                    await this.locationsRepository.save(location);
-
-                    this.logger.info(`Successfully translated location with ID: ${location.id}`);
-
-                    return newLocation;
-                } catch (error) {
-                    this.logger.error(`Error translating location with ID: ${location.id} : ${error.stack}`);
-                    throw error; // Вы можете решить, стоит ли бросать ошибку или просто логировать ее
-                }
-            });
+            const translationPromises = locations.map(location =>
+                this.limiter.schedule(() => this.translateLocation(location))
+            );
 
             return await Promise.all(translationPromises);
         } catch (error) {
             this.logger.error('Error during batch translation', error.stack);
             throw error;
+        }
+    }
+
+    private async translateLocation(location: Locations): Promise<Locations> {
+        for (let attempt = 1; attempt <= this.MAX_ATTEMPTS; attempt++) {
+            try {
+                const translatedGeocodeData = await this.translateGeocodeData(location.geocode_data);
+
+                const hotelId = await this.locationsRepository.findHotelId(location.id);
+                if (!hotelId) {
+                    throw new Error(`Hotel not found for location with ID: ${location.id}`);
+                }
+
+                const newLocation = new Locations();
+                newLocation.hotel = { id: hotelId } as Hotels;
+                newLocation.language = 'en';
+                newLocation.address = translatedGeocodeData.pretty;
+                newLocation.geocode_data = translatedGeocodeData;
+
+                await this.locationsRepository.save(newLocation);
+                location.is_translated_to_en = true;
+                await this.locationsRepository.save(location);
+
+                this.logger.info(`Successfully translated location with ID: ${location.id}`);
+
+                return newLocation;
+            } catch (error) {
+                this.logger.error(`Error translating location with ID: ${location.id} on attempt ${attempt}: ${error.stack}`);
+                if (attempt < this.MAX_ATTEMPTS) {
+                    this.logger.warn(`Retrying translation for location with ID: ${location.id} after ${this.RETRY_DELAY_MS}ms`);
+                    await new Promise(resolve => setTimeout(resolve, this.RETRY_DELAY_MS));
+                } else {
+                    throw error;
+                }
+            }
         }
     }
 
