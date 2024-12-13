@@ -143,7 +143,10 @@ export class LocationsService {
         const translatedGeocodeData = { ...geocodeData };
 
         const translateField = async (text: string | undefined, name: TTranslationName) => {
-            return text ? this.translationService.translateText(name, text, 'en') : undefined;
+            if (text && !/^\d+$/.test(text)) { // Проверяем, что текст не является числом
+                return this.translationService.translateText(name, text, 'en');
+            }
+            return text;
         };
 
         // Переводим 'areas'
