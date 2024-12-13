@@ -26,4 +26,14 @@ export class LocationsController {
         }
     }
 
+    // Эндпоинт для запуска перевода адресов пачками
+    @Post('process-translate')
+    async processTranslateLocations() {
+        try {
+            const res = await this.locationsService.processTranslateAddressesFromRussianToEnglish();
+            return { message: 'Translation process completed successfully', res };
+        } catch (error) {
+            return { message: 'Failed to translate locations', error: error.message };
+        }
+    }
 }

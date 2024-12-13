@@ -7,15 +7,52 @@ import { Locations } from './locations.entity';
 import { Hotels } from '../hotels/hotels.entity';
 import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { Logger } from 'winston';
+import { SettingsService } from '../settings/settings.service';
 
 @Injectable()
 export class LocationsService {
+    private readonly BATCH_SIZE = 5;
+
     constructor(
         private readonly locationsRepository: LocationsRepository,
         private readonly translationService: TranslationService,
+        private readonly settingsService: SettingsService,
         @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
+    ) {
+//        this.init();
+    }
+    private async init() {
+        try {
+            const shouldRun = await this.settingsService.getRunFlag();
+            if (shouldRun) {
+                await this.processTranslateAddressesFromRussianToEnglish();
+            }
+        } catch (error) {
+            this.logger.error('Error initializing LocationsService:', error.stack);
+        }
+    }
 
-    ) { }
+    async processTranslateAddressesFromRussianToEnglish(): Promise<void> {
+        try {
+            while (true) {
+                const shouldRun = await this.settingsService.getRunFlag();
+                if (!shouldRun) {
+                    this.logger.info('Run flag is false. Stopping translation process.');
+                    break;
+                }
+
+                const locations = await this.translateAddressesFromRussianToEnglish(this.BATCH_SIZE);
+                if (locations.length === 0) {
+                    this.logger.info('No more locations to translate.');
+                    break;
+                }
+
+                this.logger.info(`Translated ${locations.length} addresses to English.`);
+            }
+        } catch (error) {
+            this.logger.error('Error during address translation process:', error.stack);
+        }
+    }
 
     async translateAddressesFromRussianToEnglish(batch: number): Promise<Locations[]> {
         try {

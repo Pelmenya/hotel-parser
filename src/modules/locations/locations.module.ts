@@ -6,11 +6,13 @@ import { LocationsController } from './locations.controller';
 import { LocationsService } from './locations.service';
 import { TranslationModule } from '../translation/translation.module';
 import { HotelsModule } from '../hotels/hotels.module';
+import { SettingsModule } from '../settings/settings.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Locations]),
     TranslationModule,
+    SettingsModule,
   ],
   providers: [LocationsRepository, LocationsService],
   exports: [LocationsRepository, LocationsService],
