@@ -10,5 +10,6 @@ export type TTranslationName =
     | 'description'
     | 'hotel from location'
     | 'hotel name'
-    | 'address';
+    | 'address'
+    | 'address part';
 

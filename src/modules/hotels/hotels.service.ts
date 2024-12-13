@@ -32,6 +32,7 @@ import { LocationsRepository } from '../locations/locations.repository';
 import { Locations } from '../locations/locations.entity';
 import { TransportService } from '../transport/transport.service';
 import { RedisService } from '../redis/redis.service';
+import { TAddressResponse } from 'src/types/t-address-response';
 
 
 @Injectable()
