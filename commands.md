@@ -9,7 +9,7 @@ docker compose up --build
 ```
 ### Dump BD
 ``` cmd
-docker exec -i postgres_postgis_parser /bin/bash -c "PGPASSWORD=secret pg_dump --username postgres hotels" > ./dump/dump_14_12_24_v1_prod.sql
+docker exec -i postgres_postgis_parser /bin/bash -c "PGPASSWORD=secret pg_dump --username postgres hotels" > ./dump/dump_18_12_24_v1_prod_fix_locations.sql
 ```
 
 ### Restore BD
@@ -17,3 +17,17 @@ docker exec -i postgres_postgis_parser /bin/bash -c "PGPASSWORD=secret pg_dump -
 docker exec -i postgres_postgis_parser /bin/bash -c "PGPASSWORD=secret psql --username postgres hotels" < ./dump/dump_04_12_24.sql
 ```
 
+### Dump Table
+``` cmd
+docker exec -i postgres_postgis_parser /bin/bash -c "PGPASSWORD=secret pg_dump --username postgres --dbname=hotels_backup --table=public.locations --data-only --no-owner --no-privileges" > ./dump/locations_backup.sql
+```
+
+# Удаляем данные из таблицы locations
+``` cmd
+docker exec -i postgres_postgis_parser /bin/bash -c "PGPASSWORD=secret psql --username postgres --dbname=hotels -c 'DELETE FROM public.locations'"
+```
+
+# Импортируем данные из файла
+``` cmd
+docker exec -i postgres_postgis_parser /bin/bash -c "PGPASSWORD=secret psql --username postgres --dbname=hotels" < ./dump/locations_backup.sql
+```
