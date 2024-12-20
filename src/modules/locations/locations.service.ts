@@ -21,7 +21,7 @@ export class LocationsService {
         private readonly settingsService: SettingsService,
         @Inject(WINSTON_MODULE_PROVIDER) private readonly logger: Logger,
     ) {
-        this.init();
+        //this.init();
     }
 
     private async init() {

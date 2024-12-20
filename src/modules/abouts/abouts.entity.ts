@@ -1,6 +1,6 @@
 import { Hotels } from 'src/modules/hotels/hotels.entity';
 import { Entity, Column, PrimaryGeneratedColumn, Index, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { TDescription } from './abouts.types';
+import { TAbout, TDescription } from './abouts.types';
 import { TLanguage } from 'src/types/t-language';
 
 
@@ -13,6 +13,9 @@ export class Abouts {
     @Column({ nullable: true })
     title: string;
 
+    @Column('jsonb', { nullable: true }) // Используем jsonb и указываем, что это массив
+    original_descriptions: TAbout;
+    
     @Column('jsonb', { nullable: true }) // Используем jsonb и указываем, что это массив
     descriptions: TDescription[] = [];
 

@@ -54,8 +54,8 @@ export class HotelsRepository {
         return this.hotelsRepository.findOne({ where: { name, address } });
     }
 
-    async findHotelsWithSavePageById(id: string): Promise<Hotels[] | undefined> {
-        return this.hotelsRepository.find({
+    async findHotelsWithSavePageById(id: string): Promise<Hotels | undefined> {
+        return this.hotelsRepository.findOne({
             where: {
                 id,
                 page_loaded: true
@@ -74,7 +74,7 @@ export class HotelsRepository {
     async lockHotelsForProcessing(instanceId: number, batchSize: number): Promise<Hotels[]> {
         return await AppDataSource.transaction(async transactionalEntityManager => {
             const hotels = await transactionalEntityManager.createQueryBuilder(Hotels, "hotel")
-                .where("hotel.page_loaded = false AND hotel.locked_by IS NULL")
+                .where("hotel.page_loaded = false AND hotel.locked_by IS NULL AND hotel.is_visible = true")
                 .orderBy("hotel.id", "ASC")
                 .limit(batchSize)
                 .setLock("pessimistic_write")

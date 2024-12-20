@@ -225,7 +225,7 @@ export class HotelsService {
         for (const hotel of lockedHotels) {
             try {
                 await this.saveHotelPage(hotel.id, hotel.hotel_link_ostrovok);
-                await this.extractAndStoreHotelFromPage(hotel.id);
+                await this.extractAndStoreHotelFromPage(hotel);
 
                 // Снимаем блокировку и отмечаем страницу как загруженную после успешной обработки
                 await this.hotelsRepository.updateHotelPageLoaded(hotel.id, true);
@@ -267,7 +267,7 @@ export class HotelsService {
             for (const hotel of hotelsToProcess) {
                 try {
                     await this.saveHotelPage(hotel.id, hotel.hotel_link_ostrovok);
-                    await this.extractAndStoreHotelFromPage(hotel.id);
+                    await this.extractAndStoreHotelFromPage(hotel);
 
                     // Снимаем блокировку и отмечаем страницу как загруженную после успешной обработки
                     await this.hotelsRepository.updateHotelPageLoaded(hotel.id, true);
@@ -287,10 +287,8 @@ export class HotelsService {
         return this.filesService.readDataHotelFromJson(hotelLink);
     }
 
-    async extractAndStoreHotelFromPage(id: string) {
-        const hotels = await this.hotelsRepository.findHotelsWithSavePageById(id);
-        if (hotels.length) {
-            const hotel = hotels[0];
+    async extractAndStoreHotelFromPage(hotel: Hotels) {
+        if (hotel) {
             const hotelLinkPart = hotel.hotel_link_ostrovok.split('/')[5];
             const data = await this.getDataHotelFromJson(hotelLinkPart);
             const $ = cheerio.load(data);
@@ -304,35 +302,37 @@ export class HotelsService {
 
             const promises = [
                 this.createHotelAboutFromPage($, hotel),
-                this.createHotelImagesFromPage($, hotel),
-                this.createHotelAmenitiesFromPage($, hotel),
-                this.createHotelGeoFromPage($, hotel),
-                this.createHotelPoliciesFromPage($, hotel),
-                this.retryableTranslateHotelName(hotel.name)  // Используем метод с повторными попытками
+                //this.createHotelImagesFromPage($, hotel),
+                //this.createHotelAmenitiesFromPage($, hotel),
+                //this.createHotelGeoFromPage($, hotel),
+                //this.createHotelPoliciesFromPage($, hotel),
+                //this.retryableTranslateHotelName(hotel.name)  // Используем метод с повторными попытками
             ];
 
             try {
                 const results = await Promise.all(promises);
 
                 hotel.abouts_processed = (results[0] as TSuccess).success;
-                hotel.images_processed = (results[1] as TSuccess).success;
-                hotel.amenities_processed = (results[2] as TSuccess).success;
-                hotel.geo_processed = (results[3] as TSuccess).success;
-                hotel.policies_processed = (results[4] as TSuccess).success;
-                hotel.name_en = results[5] as string;  // Сохраняем переведенное имя отеля
+               // hotel.images_processed = (results[1] as TSuccess).success;
+              //  hotel.amenities_processed = (results[2] as TSuccess).success;
+              //  hotel.geo_processed = (results[3] as TSuccess).success;
+               // hotel.policies_processed = (results[4] as TSuccess).success;
+              //  hotel.name_en = results[5] as string;  // Сохраняем переведенное имя отеля
 
                 this.logger.warn('All parts are processed');
             } catch (error) {
                 this.logger.error(`Error processing hotel ${hotel.id}:`, error);
             }
 
-            hotel.page_processed = hotel.abouts_processed &&
+            hotel.page_processed = hotel.abouts_processed 
+            /*
+            &&
                 hotel.images_processed &&
                 hotel.amenities_processed &&
                 hotel.geo_processed &&
                 hotel.policies_processed &&
                 !!hotel.name_en; // Убедитесь, что имя на английском также обновлено
-
+            */
             await this.hotelsRepository.save(hotel);
 
             if (hotel.page_processed) {
@@ -388,7 +388,7 @@ export class HotelsService {
                     return { success: false };
                 }
 
-                const res = await this.aboutsService.saveOpenAIData(openAIData, hotel.id);
+                const res = await this.aboutsService.saveOpenAIData(dataDescription, openAIData, hotel);
                 return { success: res.success };
             } catch (error) {
                 this.logger.error('Failed to process hotel about data:', error);

@@ -65,18 +65,21 @@ export class OpenAIService {
                     Улучшите следующие описания отеля для SEO, используя релевантные ключевые слова и улучшая структуру текста.
                     Верните результат исключительно в формате JSON, без дополнительного текста, на русском и английском языках.
                     Данные должны быть структурированы в два отдельных JSON-блока: один для русского, другой для английского.
+                    Описание:
+                    ${JSON.stringify(data)}
 
                     Пример правильного формата ответа:
                     **Русский язык**
                     \`\`\`json
                     {
-                      "aboutHotelDescriptionTitle": "Уютные апартаменты в центре города",
+                      "aboutHotelDescriptionTitle": "",
                       "aboutHotelDescriptions": [
                         {
                           "idx": 0,
-                          "title": "Расположение",
-                          "paragraph": "Апартаменты расположены в самом сердце города, в шаговой доступности от главных достопримечательностей."
+                          "title": "",
+                          "paragraph": ""
                         }
+                          ...
                       ]
                     }
                     \`\`\`
@@ -84,13 +87,14 @@ export class OpenAIService {
                     **Английский язык**
                     \`\`\`json
                     {
-                      "aboutHotelDescriptionTitle": "Cozy apartments in the city center",
+                      "aboutHotelDescriptionTitle": "",
                       "aboutHotelDescriptions": [
                         {
                           "idx": 0,
-                          "title": "Location",
-                          "paragraph": "The apartments are located in the heart of the city, within walking distance of major attractions."
+                          "title": "",
+                          "paragraph": ""
                         }
+                          ...
                       ]
                     }
                     \`\`\`
