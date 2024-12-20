@@ -41,12 +41,6 @@ export class HotelsController {
         return await this.hotelsService.saveHotelsPages(params.batch);
     }
 
-    @Post(':id')
-    @HttpCode(200)
-    async createHotelFromPageById(@Param('id') id: string,): Promise<any> {
-        return await this.hotelsService.extractAndStoreHotelFromPage(id);
-    }
-
     @Patch('address')
     @HttpCode(200)
     async patchInvalidHotelsAddresses(): Promise<any> {
