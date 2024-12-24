@@ -548,6 +548,118 @@ services:
           memory: 2G
     restart: always
 
+  hotel-parser-11:
+    build: ./ 
+    container_name: hotel-parser-11
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - ./logs:/app/logs
+      - uploads:/app/uploads
+    ports:
+      - ${DEV_PORT_11}:3000
+    depends_on:
+      - postgres_postgis_parser
+      - redis_parser
+    environment:
+      PORT: ${DEV_PORT_11}
+      SECRET: ${SECRET}
+      IS_DEV: "true"
+      BASE_PARSE_URL: ${BASE_PARSE_URL}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      INSTANCE_ID: ${INSTANCE_ID_11}
+      TOTAL_INSTANCES: ${TOTAL_INSTANCES}
+      PROXY_HOST: ${PROXY_HOST_11}
+      PROXY_PORT: ${PROXY_PORT_11}
+      PROXY_LOGIN: ${PROXY_LOGIN_11}
+      PROXY_PASSWORD: ${PROXY_PASSWORD_11}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_BASE_API_URL: ${OPENAI_BASE_API_URL}
+      OPENAI_MODEL: ${OPENAI_MODEL}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+      S3_ENDPOINT: ${S3_ENDPOINT}
+      S3_BUCKET: ${S3_BUCKET}
+      YA_FOLDER_ID: ${YA_FOLDER_ID}
+      IAM_TOKEN_URL: ${IAM_TOKEN_URL}
+      TRANSLATE_API_URL: ${TRANSLATE_API_URL}
+      KEY_FILE_PATH: ${KEY_FILE_PATH}
+      YA_HTTP_GEOCODER_API_KEY: ${YA_HTTP_GEOCODER_API_KEY}
+      AHUNTER_API_KEY: ${AHUNTER_API_KEY}
+      REDIS_HOST: redis_parser
+      REDIS_PORT: 6379
+
+    working_dir: /app
+    command: sh -c "cd /app; rm -rf dist; npm install; npm run start:dev"
+    networks:
+      - custom_network
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+    restart: always
+
+  hotel-parser-10:
+    build: ./ 
+    container_name: hotel-parser-10
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - ./logs:/app/logs
+      - uploads:/app/uploads
+    ports:
+      - ${DEV_PORT_10}:3000
+    depends_on:
+      - postgres_postgis_parser
+      - redis_parser
+    environment:
+      PORT: ${DEV_PORT_10}
+      SECRET: ${SECRET}
+      IS_DEV: "true"
+      BASE_PARSE_URL: ${BASE_PARSE_URL}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      INSTANCE_ID: ${INSTANCE_ID_10}
+      TOTAL_INSTANCES: ${TOTAL_INSTANCES}
+      PROXY_HOST: ${PROXY_HOST_10}
+      PROXY_PORT: ${PROXY_PORT_10}
+      PROXY_LOGIN: ${PROXY_LOGIN_10}
+      PROXY_PASSWORD: ${PROXY_PASSWORD_10}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_BASE_API_URL: ${OPENAI_BASE_API_URL}
+      OPENAI_MODEL: ${OPENAI_MODEL}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+      S3_ENDPOINT: ${S3_ENDPOINT}
+      S3_BUCKET: ${S3_BUCKET}
+      YA_FOLDER_ID: ${YA_FOLDER_ID}
+      IAM_TOKEN_URL: ${IAM_TOKEN_URL}
+      TRANSLATE_API_URL: ${TRANSLATE_API_URL}
+      KEY_FILE_PATH: ${KEY_FILE_PATH}
+      YA_HTTP_GEOCODER_API_KEY: ${YA_HTTP_GEOCODER_API_KEY}
+      AHUNTER_API_KEY: ${AHUNTER_API_KEY}
+      REDIS_HOST: redis_parser
+      REDIS_PORT: 6379
+
+    working_dir: /app
+    command: sh -c "cd /app; rm -rf dist; npm install; npm run start:dev"
+    networks:
+      - custom_network
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+    restart: always
+
 volumes:
   postgres_data_parser:
   pgadmin_data_parser:

@@ -66,6 +66,8 @@ export class HotelsService {
         this.totalInstances = this.configService.get<number>('TOTAL_INSTANCES');
         this.YA_HTTP_GEOCODER_API_KEY = this.configService.get<string>('YA_HTTP_GEOCODER_API_KEY');
         this.AHUNTER_API_KEY = this.configService.get<string>('AHUNTER_API_KEY');
+        
+        setTimeout(() => this.processLockedHotels(), 3000 * (this.instanceId - 1));
     }
 
     async checkRunFlag(): Promise<boolean> {
